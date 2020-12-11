@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>wavesurfer 处理大音频文件波形渲染(一) ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期六, 七月 27日 2019, 9:15 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>wavesurfer 是一个利用Web Audio API和Canvas进行交互式导航音频可视化三方库。</p>
+<a id="more"></a>
+
+<h4 id="背景"><a href="#背景" class="headerlink" title="背景:"></a>背景:</h4><p>通常用 wavesurfer 来做音轨波形的渲染。笔者目前所做的项目中用到 wavesurfer 来实现了对音频截取段落的分析标注，实现过程中发现大音频（<strong>100M以上wav文件</strong>）的加载和渲染会占用过多的浏览器内存，导致浏览器崩溃。针对此现象，调研过目前能寻找到的解决方案，例如:</p>
+<ul>
+<li><a href="https://www.cnblogs.com/webhmy/p/10175785.html" target="_blank" rel="noopener">基于wavesurfer.js的超大音频的渐进式请求实现</a></li>
+</ul>
+<p>由于服务端小伙伴业务繁忙不能支持原因没能够尝试此方案，所以没有进行验证是否可行。最终阅读了部分的 wavesurfer 源码之后，采用了一种类似的分段加载方式解决了目前的问题。</p>
+<hr>
+<h4 id="采用音频分段加载方式的主要流程"><a href="#采用音频分段加载方式的主要流程" class="headerlink" title="采用音频分段加载方式的主要流程:"></a>采用音频分段加载方式的主要流程:</h4><ol>
+<li>主动发起请求wav资源的前100字节</li>
+<li>根据前100字节内容拼接出当前wav资源文件的头信息</li>
+<li>按照一定的字节范围顺序请求当前的wav资源，每请求一段就拼接上之前获取的头信息，处理成 wavesurfer 可以操作的 buffer</li>
+<li>wavesurfer 处理之前获取到的每一小段的 buffer 产生每一小段的波形信息</li>
+<li>当wav资源的所有字节都被请求到，并且 buffer 也都被 wavesurfer 处理完毕成波形信息，拼接所有请求段的波形信息，交给 wavesurfer 进行渲染，在渲染的同时，生成波形信息文件上传到服务端保存，下次再获取相同的wav资源就直接获取波形信息文件，避免重复的 decode</li>
+</ol>
+<hr>
+<h3 id="以下对之前的流程步骤做出解释"><a href="#以下对之前的流程步骤做出解释" class="headerlink" title="以下对之前的流程步骤做出解释:"></a>以下对之前的流程步骤做出解释:</h3><p>在此之前需要了解wav资源是什么(基础知识)  </p>
+<ul>
+<li><a href="https://blog.csdn.net/mlkiller/article/details/12567139" target="_blank" rel="noopener">参考1</a></li>
+<li><a href="https://baike.baidu.com/item/WAV#1" target="_blank" rel="noopener">参考2</a></li>
+</ul>
+<h4 id="为什么第一次请求前100字节"><a href="#为什么第一次请求前100字节" class="headerlink" title="为什么第一次请求前100字节"></a>为什么第一次请求前100字节</h4><p>注意以上参考文中提到一个wav资源文件的数据信息 <code>从 50H 位开始就是真正的数据部分(16进制)</code>，所以获取资源的100字节就可以截取到一个完整的头部信息</p>
+<p>由于第3步的时候需要调用 wavesurfer 方法进行 decode，在这个过程中必须要是一个完整的音频文件，否则会 decode 失败。</p>
+<p>那么分段加载的音频，除了第一段请求结果会带有wav资源的头信息之外，之后其他的所有请求段落都不会自动带有头信息，即非完整音频文件。所以就需要拿到当前wav资源的头信息拼接到之后所有的请求段前形成一个”完整”的音频文件，让 wavesurfer 正常进行 decode 产生当前请求段的波形信息。</p>
+<h4 id="如何从前100字节获取到头信息"><a href="#如何从前100字节获取到头信息" class="headerlink" title="如何从前100字节获取到头信息"></a>如何从前100字节获取到头信息</h4><p><a href="https://baike.baidu.com/item/WAV#1" target="_blank" rel="noopener">参考2</a> 中文章介绍到 <code>48H ~ 4BH 64 61 74 71 对应的 ACSCII 码是 data</code> 以及 <code>从 50H 开始就是真正的数据部分</code>，并且 <code>data</code> 对应的数据信息永远都是 <code>64 61 74 71 (对应的10进制是 100 97 116 97)</code>，所以就可以以此为目标点获取真正数据前面的数据信息就是完整的头部信息。</p>
+<pre><code class="js">import axios from &#39;axios&#39;;
+
+function getWavHeaderInfo (buffer) {
+    const firstBuffer = buffer;
+    // 创建数据视图来操作数据
+    const dv = new DataView(firstBuffer);
+    // 从数据视图拿出数据
+    const dvList = [];
+    for (let i = 0, len = dv.byteLength; i &lt; len; i += 1) {
+        dvList.push(dv.getInt8(i));
+    }
+    // 找到头部信息中的data字段位置
+    const findDataIndex = dvList.join().indexOf(&#39;,100,97,116,97&#39;);
+    if (findDataIndex &lt;= -1) {
+        throw new Error(&#39;解析失败&#39;);
+    }
+    // data 字段之前所有的数据信息字符串
+    const dataAheadString = dvList.join().slice(0, findDataIndex);
+    //  data 字段之后 8位 是 头部信息的结尾
+    const headerEndIndex = dataAheadString.split(&#39;,&#39;).length + 7;
+    // 截取全部的头部信息
+    const headerBuffer = firstBuffer.slice(0, headerEndIndex + 1);
+
+    return headerBuffer;
+}
+
+const requestOptions = {
+    url: &#39;音频url地址&#39;,
+    method: &#39;get&#39;,
+    responseType: &#39;arraybuffer&#39;, // 请求wav信息格式
+    headers: {
+        Range: `bytes=0-99`, // 前100字节
+    },
+};
+
+axios(requestOptions).then(response =&gt; {
+    const headerBuffer = getWavHeaderInfo(response.data);
+})</code></pre>
+<h4 id="拼接每一段的请求结果和已经得到的头部信息"><a href="#拼接每一段的请求结果和已经得到的头部信息" class="headerlink" title="拼接每一段的请求结果和已经得到的头部信息"></a>拼接每一段的请求结果和已经得到的头部信息</h4><p>之前已经通过第一段请求获取到了当前资源的头部信息，接下来就是按照顺序一段一段请求剩余的资源去拼接头部信息，然后交给 wavesurfer 去进行 decode</p>
+<p>(PS: 以下代码示例采用 Class 写法)</p>
+<pre><code class="js">import axios from &#39;axios&#39;;
+import _ from &#39;lodash&#39;;
+
+class requestWav {
+    constructor() {
+    }
+
+    defaultOptions = {
+        responseType: &#39;arraybuffer&#39;,
+        rangeFirstSize: 100,
+        rangeSize: 1024000 * 2, // 分片的每一片大小。如果太大可能导致解析顺序不一致，尽可能小于5M
+        requestCount: 1, // 请求个数
+        loadRangeSucess: null, // 每一段请求之后完成的回调
+        loadAllSucess: null, // 全部加载完成之后的回调
+    }
+
+    // 合并配置
+    mergeOptions(options) {
+        this.options = Object.assign({}, this.defaultOptions, options);
+    }
+
+    loadBlocks(url, options) {
+        if (!url || !_.isString(url)) {
+            throw new Error(&#39;Argument [url] should be supplied a string&#39;);
+        }
+        this.mergeOptions(options);
+        this.url = url;
+        this.rangeList = [];
+        this.rangeLoadIndex = 0; // 当前请求的索引
+        this.rangeLoadedCount = 0; // 当前已经请求个数
+        // 先取 100 个字节长度的资源以便获取资源头信息
+        this.rangeList.push({ start: 0, end: this.options.rangeFirstSize - 1 });
+        this.loadFirstRange();
+    }
+
+    // 真正发起请求
+    requestRange(rangeArgument) {
+        const range = rangeArgument;
+        const { CancelToken } = axios;
+        const requestOptions = {
+            url: this.url,
+            method: &#39;get&#39;,
+            responseType: this.options.responseType,
+            headers: {
+                Range: `bytes=${range.start}-${range.end}`,
+            },
+            // 配置一个可取消请求的扩展
+            cancelToken: new CancelToken((c) =&gt; {
+                range.cancel = c;
+            }),
+        };
+        return axios.request(requestOptions);
+    }
+
+    fileBlock(fileSize) {
+        // 根据文件头所带的文件大小 计算需要请求的每一段大小 范围队列
+        let rangeStart = this.options.rangeFirstSize;
+        for (let i = 0; rangeStart &lt; fileSize; i += 1) {
+            const rangeItem = {
+                start: rangeStart,
+                end: rangeStart + this.options.rangeSize - 1,
+            };
+            this.rangeList.push(rangeItem);
+            rangeStart += this.options.rangeSize;
+        }
+    }
+
+    // 请求第一段
+    loadFirstRange() {
+        this.requestRange(this.rangeList[this.rangeLoadIndex]).then((response) =&gt; {
+            const fileRange = response.headers[&#39;content-range&#39;].match(/\d+/g);
+            // 获取文件大小
+            const fileSize = parseInt(fileRange[2], 10);
+            // 计算请求块
+            this.fileBlock(fileSize);
+            // 放置请求结果到请求队列中的data字段
+            this.rangeList[0].data = response.data;
+            // 获取资源头部信息 (方法同第二步)
+            this.headerBuffer = this.getWavHeaderInfo(response.data);
+            // 每一段加载完成之后处理回调
+            this.afterRangeLoaded();
+            // 加载剩下的
+            this.loadOtherRanges();
+        }).catch((error) =&gt; {
+            throw new Error(error);
+        });
+        this.rangeLoadIndex += 1;
+    }
+
+    afterRangeLoaded() {
+        this.rangeLoadedCount += 1;
+        // 每一次请求道数据之后 判断当前请求索引和应当请求的所有数量
+        // 触发 loadRangeSucess 和 loadAllSucess 回调
+        if (this.rangeLoadedCount &gt; 1
+            &amp;&amp; this.options.loadRangeSucess
+            &amp;&amp; typeof this.options.loadRangeSucess === &#39;function&#39;
+        ) {
+            this.contactRangeData(this.options.loadRangeSucess);
+        }
+        if (this.rangeLoadedCount &gt;= this.rangeList.length
+            &amp;&amp; this.options.loadAllSucess
+            &amp;&amp; typeof this.options.loadAllSucess === &#39;function&#39;
+        ) {
+            this.options.loadAllSucess();
+            this.rangeList = [];
+        }
+    }
+
+    loadOtherRanges() {
+        // 循环请求范围队列
+        if (this.rangeLoadIndex &lt; this.rangeList.length) {
+            this.loadRange(this.rangeList[this.rangeLoadIndex]);
+        }
+    }
+
+    loadRange(rangeArgument) {
+        const range = rangeArgument;
+        this.requestRange(range).then((response) =&gt; {
+            // 放置请求结果到请求队列中的data字段
+            range.data = response.data;
+            this.afterRangeLoaded();
+            this.loadOtherRanges();
+        }).catch((error) =&gt; {
+            throw new Error(error);
+        });
+        this.rangeLoadIndex += 1;
+    }
+
+    contactRangeData(callback) {
+        const blobIndex = this.rangeLoadIndex - 1;
+        if (!this.headerBuffer) {
+            return;
+        }
+        // 从请求队列中的每一个data获取数据，拼接上已经有的header头信息，保存为 audio/wav blob文件
+        const blob = new Blob(
+            [this.headerBuffer,
+            this.rangeList[blobIndex].data],
+            { type: &#39;audio/wav&#39; }
+        );
+        const reader = new FileReader();
+        // 将blob读取为 buffer 交给 loadRangeSucess 回调
+        reader.readAsArrayBuffer(blob);
+        reader.onload = () =&gt; {
+            callback(reader.result, blobIndex);
+        };
+        reader.onerror = () =&gt; {
+            throw new Error(reader.error);
+        };
+    }
+
+    destroyRequest() {
+        // 销毁请求，使用场景是:
+        // 如果当前的资源没有加载完成，此时更换了资源的URL地址，应该取消之前设定的请求,避免浪费请求资源
+        if (!this.rangeList) {
+            return;
+        }
+        this.rangeList.forEach((rang) =&gt; {
+            if (rang.cancel) {
+                rang.cancel(&#39;取消音频下载&#39;);
+            }
+        });
+    }
+}
+
+export default new requestWav();</code></pre>
+<p>至此前三步已经完成，拿到了所有的音频段落，并且拼装成了”完整”的音频，读取到了相对应的buffer。<a href="/2019/08/02/wavesurfer大音频(二)/">下一篇</a>将继续完善第四步和第五步分段将获取到的每一段的 buffer 去产生波形以及最终拼装所有波形文件。</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;JavaScript三方库</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "wavesurfer 处理大音频文件波形渲染(一)&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

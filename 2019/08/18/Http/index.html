@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>HTTP 协议 ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期日, 八月 18日 2019, 8:20 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>HTTP 是基于 TCP/IP 协议的一个应用层协议，是现代互联网的一个基础协议。规定了客户端与服务端之间的通信格式以及所占用的服务端口80(HTTPS是443)。</p>
+<a id="more"></a>
+
+<h3 id="版本"><a href="#版本" class="headerlink" title="版本"></a>版本</h3><p>HTTP 协议从开始立项到现在一共经历了 <code>4</code> 个版本: <code>HTTP 0.9 -&gt; HTTP 1.0 -&gt; HTTP 1.1 -&gt; HTTP 2</code>。由于 HTTP 2 版本之后不会有小的版本存在，直接会有 HTTP 3 的诞生，所以 HTTP 2 版本不叫 HTTP 2.0 。</p>
+<h3 id="HTTP-0-9"><a href="#HTTP-0-9" class="headerlink" title="HTTP 0.9"></a>HTTP 0.9</h3><p>HTTP 0.9 是一个最古老的版本，只支持<code>GET</code>请求方式，且没有请求头的概念，就没有在请求中指定版本号，服务端也只具有返回 HTML 字符串的能力。每一次发起请求之后，服务端返回内容就关闭此次 TCP 连接。由于不支持其他请求方式，因此客户端是没办法向服务端传输太多的信息的。</p>
+<h3 id="HTTP-1-0"><a href="#HTTP-1-0" class="headerlink" title="HTTP 1.0"></a>HTTP 1.0</h3><p>随着 HTTP 1.0 的发布，这个版本:</p>
+<ul>
+<li>支持了<code>POST</code>和<code>HEAD</code>两种请求方式</li>
+<li>增添了请求头和响应头的概念，在通信中指定了 HTTP 协议版本号，以及其他的一些元信息 (比如: 状态码、权限、缓存、内容编码)</li>
+<li>扩充了传输内容格式，图片、音视频资源、二进制等都可以进行传输</li>
+</ul>
+<p>在这个版本主要的就是对请求和响应的元信息进行了扩展，客户端和服务端有更多的获取当前请求的所有信息，进而更好更快的处理请求相关内容。</p>
+<h4 id="请求头"><a href="#请求头" class="headerlink" title="请求头"></a>请求头</h4><p>一个简单请求的头信息</p>
+<pre><code class="header">GET / HTTP/1.0
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5)
+Accept: */*</code></pre>
+<p>可以看到在请求方法之后有 请求资源的位置 + 请求协议版本，之后是一些客户端的信息配置</p>
+<h4 id="响应头"><a href="#响应头" class="headerlink" title="响应头"></a>响应头</h4><p>一个简单响应的头信息(v1.0)</p>
+<pre><code class="header">HTTP/1.0 200 OK
+Content-Type: text/plain
+Content-Length: 137582
+Expires: Thu, 05 Dec 1997 16:00:00 GMT
+Last-Modified: Wed, 5 August 1996 15:55:28 GMT
+// 这是一个空行
+...数据内容</code></pre>
+<p>服务端的响应头第一个就是 请求协议版本，后面紧跟着是这次请求的状态码、以及状态码的描述，之后的内容是一些关于返回内容的描述。</p>
+<h5 id="Content-Type"><a href="#Content-Type" class="headerlink" title="Content-Type"></a>Content-Type</h5><p>在 HTTP 1.0 的时候，任何的资源都可以被传输，传输的格式呢也是多种多样的，客户端在收到响应体的内容的时候就是根据这个 <code>Content-Type</code> 去进行解析的。所以服务端返回时候必须带着这个字段。</p>
+<p>一些常见的 <code>Content-Type</code> 可以参考<a href="http://tool.oschina.net/commons/" target="_blank" rel="noopener">对照表</a>。这些 <code>Content-Type</code> 有一个总称叫做<code>MIME type</code>。关于<code>MIME type</code>，这里想播插一个小插曲:</p>
+<blockquote>
+<p>在 chrome 浏览器中，当跨域请求回来的数据 MIME type 同跨域标签应有的 MIME type 不匹配时，浏览器会启动 <a href="https://www.chromium.org/Home/chromium-security/corb-for-developers" target="_blank" rel="noopener">CORB</a> 保护数据不被泄漏。被保护的数据有: html、xml、json。(eg: script、img 标签所支持的 MIME type和他们都不一致)，所以服务端在返回资源的时候一定要对应返回正确的 <code>Content-Type</code>，以免浏览器屏蔽返回结果。<br>笔者遇到的问题是在 chrome v76 版本之后，跨域图片资源当请求回来的数据 <code>Content-Type</code> 不是 <code>image/*</code>，图片会被拦截，页面不展示图片。</p>
+</blockquote>
+<h5 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h5><ul>
+<li><p>v1.0 中一次请求-响应，建立一个连接，用完关闭；每一个请求都要建立一个连接。TCP 连接的创建是相对于计算机的处理能力来说非常耗时的，每请求一个资源都要创建一次连接，当页面依赖的资源越来越多，无疑是一个”灾难”。</p>
+</li>
+<li><p>v1.0 版本中主要是使用头信息里的<code>If-Modified-Since</code>，<code>Expires</code>来做为缓存判断的标准，这两个字段处理缓存是存在的问题可以自行查找资料了解~</p>
+</li>
+<li><p>v1.0 中请求一个资源服务端就会一股脑的全部返回当前资源的所有内容，一些场景下只需要这个资源的一小部分内容这样的需求是不能被满足的，可能就浪费了一定的带宽。</p>
+</li>
+</ul>
+<h3 id="HTTP-1-1"><a href="#HTTP-1-1" class="headerlink" title="HTTP 1.1"></a>HTTP 1.1</h3><p>HTTP 1.1 是在 1.0 发布之后的半年就推出了，完善了 1.0 版本。目前也还有很多的互联网项目基于 HTTP 1.1 在向外提供服务。</p>
+<p>在这个版本里:</p>
+<ul>
+<li><p>增加了更多的请求方法：<code>PUT</code>、<code>PATCH</code>、<code>HEAD</code>、<code>OPTIONS</code>、<code>DELETE</code></p>
+</li>
+<li><p>引入了持久连接，即TCP连接默认不关闭，可以被多个请求复用，不用声明额外的字段，比如<code>Connection: keep-alive</code>。当然持久连接的数量各个浏览器也做了限制，大部分都是在<code>6</code>个左右</p>
+</li>
+<li><p>引入了管道机制，即在同一个TCP连接里面，客户端可以同时发送多个请求。但是服务端还是先回应前面的再回应后面的</p>
+</li>
+<li><p>引入了 <code>range</code> 头信息字段，指定请求某一资源的某一段信息，返回码为206（Partial Content）。<code>range</code> 字段通常也用来当做断点传输的关键参数。</p>
+</li>
+<li><p>引入了更多的缓存控制策略，例如<code>Entity tag</code>，<code>If-Unmodified-Since</code>, <code>If-Match</code>, <code>If-None-Match</code>等更多可供选择的缓存头字段来控制缓存策略</p>
+</li>
+<li><p>增添了 <code>host</code> 头信息字段，指定服务器的域名。适应一台物理机中多个虚拟机共享一个ip地址的问题</p>
+</li>
+</ul>
+<p>虽说已经在 v1.0 的版本上扩展了更强大的功能，也支持了 TCP 连接的复用，节省创建连接的时间，但是在同一个TCP连接里面，客户端可以同时发送多个请求，服务端还是先回应前面的再回应后面的，即在前一个请求响应处理之后处理下一个请求，如果前一个阻塞，后面的请求也会阻塞，这就是<a href="https://zh.wikipedia.org/wiki/%E9%98%9F%E5%A4%B4%E9%98%BB%E5%A1%9E" target="_blank" rel="noopener">队头阻塞</a>。</p>
+<h3 id="HTTP-2"><a href="#HTTP-2" class="headerlink" title="HTTP 2"></a>HTTP 2</h3><h4 id="SPDY"><a href="#SPDY" class="headerlink" title="SPDY"></a>SPDY</h4><p>在 HTTP 2 之前，Google 这个伟大的公司提出了<code>SPDY</code>的方案，优化了 HTTP1.X 的请求延迟，解决了 HTTP1.X 的安全性，主要包含:</p>
+<ul>
+<li><p>多路复用降低延时，通过多个请求 stream 共享一个 tcp 连接的方式，降低了延迟同时提高了带宽的利用率，解决队头阻塞问题</p>
+</li>
+<li><p>多路复用可能会导致在共享连接上的某些关键请求被阻塞(其实就是谁先谁后的竞争问题)，所以<code>SPDY</code>可以给每一个请求设置优先级，保证请求顺序按照可控顺序执行</p>
+</li>
+<li><p>头信息压缩。随着客户端与服务端能处理的事情越来越多，需要的头信息字段也越来越多，这些信息的传输也是需要带宽流量的，所以需要选择合适的压缩算法可以减小包的大小和数量</p>
+</li>
+<li><p>SSL协议加密，提高了传输数据的可靠性</p>
+</li>
+<li><p>服务端推送(server push)，服务端在收到一些资源请求的时候，会主动推送相关资源到客户端，客户端在下次请求的时候就会到缓存中找到，减少了一次请求</p>
+</li>
+</ul>
+<p><code>SPDY</code>构成从上到下依次是: <code>HTTP -&gt; SPDY -&gt; SSL -&gt; TCP</code></p>
+<p>SPDY位于HTTP之下，TCP和SSL之上，这样可以轻松兼容老版本的HTTP协议，同时可以使用已有的SSL功能。</p>
+<h4 id="HTTP-2-1"><a href="#HTTP-2-1" class="headerlink" title="HTTP 2"></a>HTTP 2</h4><p>HTTP 2 是在<code>SPDY</code>的基础之上设计的，就是一个升级版~所以 SPDY 的特性都在 HTTP 2 上有所体现。</p>
+<p>那么 HTTP 2 相对于 v1.1 版本的新特性:</p>
+<ul>
+<li><p>二进制格式分帧传输。HTTP 1.x 的解析是基于文本，HTTP 2之后将所有传输的信息分割为更小的消息和帧，并对它们采用二进制格式的编码，提高传输效率</p>
+</li>
+<li><p>多路复用。在共享TCP链接的基础上同时发送请求和响应，基于二进制分帧，在同一域名下所有访问都是从同一个tcp连接中走，http消息被分解为独立的帧，乱序发送，服务端根据标识符和首部将消息重新组装起来。多路复用的另一个关键在于 TCP 连接创建的一开始传输速度是被限制的，在第一批数据传输成功之后，会随着时间传输速率会越来越大，这样的原因是因为<code>慢启动协议</code>(<a href="https://baike.baidu.com/item/%E6%85%A2%E5%90%AF%E5%8A%A8/8242395" target="_blank" rel="noopener">详见</a>) 以及<code>滑动窗口协议</code>(<a href="https://baike.baidu.com/item/%E6%BB%91%E5%8A%A8%E7%AA%97%E5%8F%A3%E5%8D%8F%E8%AE%AE/10291557?fr=aladdin" target="_blank" rel="noopener">详见</a>)，希望的是每一次连接都能最大利益化。而多路复用让所有数据流共用同一个连接，更有效地使用 TCP 连接的高速率传输段。</p>
+</li>
+<li><p>头信息压缩。由于 HTTP 是无状态的，每一个请求都需要头部信息标识这次请求相关信息，所以会造成传输很多重复的信息，当请求数量增大的时候，消耗的资源就会慢慢积累上去。所以 HTTP 2 可以维护一个头部信息字典，差量进行更新头信息，减少头部信息传输占用的资源。<a href="https://imququ.com/post/header-compression-in-http2.html" target="_blank" rel="noopener">详见</a></p>
+</li>
+<li><p>服务端推送(server push)</p>
+</li>
+</ul>
+<h3 id="HTTPS-和-HTTP"><a href="#HTTPS-和-HTTP" class="headerlink" title="HTTPS 和 HTTP"></a>HTTPS 和 HTTP</h3><ul>
+<li><p>HTTPS 协议需要申请证书</p>
+</li>
+<li><p>HTTP 和 HTTPS 使用端口不一样，前者是80，后者是443</p>
+</li>
+<li><p>HTTP 协议运行在 TCP 之上，所有传输的内容都是明文，HTTPS 运行在 SSL/TLS 之上，SSL/TLS运行在TCP之上，所有传输的内容都经过加密的</p>
+</li>
+<li><p>HTTPS 可以有效的防止运营商劫持</p>
+</li>
+</ul>
+<h3 id="结尾"><a href="#结尾" class="headerlink" title="结尾"></a>结尾</h3><p>虽然在2015年，HTTP 2 就发布了，但是目前互联网的服务中，使用 HTTP 1.x 版本的服务不在少数，其中可能很大的一个原因是在当前的主流浏览器比如 chrome、Firefox 它们只支持基于 TLS 部署的 HTTP 2 协议，也就是说需要你的网站先升级为 HTTPS 才可以。然而 HTTPS 是需要申请证书的。</p>
+<p>当然如果你的网站已经升级过 HTTPS 了，那么想升级 HTTP 2 就非常容易了。前端服务利器<code>[nginx]</code>能帮你做这所有，<a href="(https://www.nginx.com/blog/nginx-1-9-5/)">详见</a>~</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;计算机网络</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "HTTP 协议&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

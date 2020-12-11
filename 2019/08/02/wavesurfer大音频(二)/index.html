@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>wavesurfer 处理大音频文件波形渲染(二) ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期五, 八月 2日 2019, 10:12 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>wavesurfer 是一个利用Web Audio API和Canvas进行交互式导航音频可视化三方库。</p>
+<a id="more"></a>
+
+<p>在<a href="/2019/07/27/wavesurfer大音频(一)/">上一篇</a>文章中，我们已经获取到所有的”完整”音频段落，接下来就要利用这些”完整”的音频段落，进行音频分段加载的<strong>最后两步操作</strong>:</p>
+<ol start="4">
+<li>wavesurfer 处理之前获取到的每一小段的 buffer 产生每一小段的波形信息</li>
+<li>当wav资源的所有字节都被请求到，并且 buffer 也都被 wavesurfer 处理完毕成波形信息，拼接所有请求段的波形信息，交给 wavesurfer 进行渲染，在渲染的同时，生成波形信息文件上传到服务端保存，下次再获取相同的wav资源就直接获取波形信息文件，避免重复的 decode</li>
+</ol>
+<h4 id="如何让-wavesurfer-拥有只产生波形信息的能力"><a href="#如何让-wavesurfer-拥有只产生波形信息的能力" class="headerlink" title="如何让 wavesurfer 拥有只产生波形信息的能力"></a>如何让 wavesurfer 拥有只产生波形信息的能力</h4><p>wavesurfer 是没有想外提供一个产出波形信息 Peaks 的方法的，所以就需要一点点技巧~</p>
+<pre><code class="js">/**
+ * Get the correct peaks for current wave view-port and render wave
+ *
+ * @private
+ * @emits WaveSurfer#redraw
+ */
+drawBuffer() {
+    const nominalWidth = Math.round(
+        this.getDuration() *
+            this.params.minPxPerSec *
+            this.params.pixelRatio
+    );
+    const parentWidth = this.drawer.getWidth();
+    let width = nominalWidth;
+    // always start at 0 after zooming for scrolling : issue redraw left part
+    let start = 0;
+    let end = Math.max(start + parentWidth, width);
+    // Fill container
+    if (
+        this.params.fillParent &amp;&amp;
+        (!this.params.scrollParent || nominalWidth &lt; parentWidth)
+    ) {
+        width = parentWidth;
+        start = 0;
+        end = width;
+    }
+
+    let peaks;
+    if (this.params.partialRender) {
+        /* something */
+    } else {
+        peaks = this.backend.getPeaks(width, start, end);
+        this.drawer.drawPeaks(peaks, width, start, end);
+    }
+    this.fireEvent(&#39;redraw&#39;, peaks, width);
+}</code></pre>
+<p>以上代码来自 <a href="https://github.com/katspaugh/wavesurfer.js/blob/832e114b7be6436458fc351a57699ba169d08676/src/wavesurfer.js#L1130-L1183" target="_blank" rel="noopener">wavesurfer github 源码</a>，可以看到的是 wavesurfer 在 draweBuffer 过程中得到当前正确的 peaks 信息，是根据当前的渲染容器宽度、minPxPerSec、pixelRatio和资源时长来控制 getPeaks 方法的 width、start、end参数，然后调用 drawer 的 drawPeaks 方法绘制。</p>
+<p>根据以上分析以及我们的需求仅仅是得到 peaks 波形信息，所以我们需要借用上面的代码扩展一下 wavesurfer 方法:</p>
+<pre><code class="js">// 扩展到 WaveSurfer 构造器中方法
+// 每一段音频 buffer 产生 peaks 方法
+getPeaks(arraybuffer, callback) {
+    this.backend.decodeArrayBuffer(
+        arraybuffer,
+        buffer =&gt; {
+            if (!this.isDestroyed) {
+                // https://github.com/katspaugh/wavesurfer.js/blob/832e114b7be6436458fc351a57699ba169d08676/src/wavesurfer.js#L1395-L1396
+                // decodeArrayBuffer 之后的一个赋值、置空操作。完全模仿
+                this.backend.buffer = buffer;
+                this.backend.setPeaks(null);
+                const nominalWidth = Math.round(
+                    this.getDuration() *
+                        this.params.minPxPerSec *
+                        this.params.pixelRatio
+                );
+                const parentWidth = this.drawer.getWidth();
+                let width = nominalWidth;
+                let start = 0;
+                // 此处谨记 end 一定要赋值为 width
+                // 原本的 let end = Math.max(start + parentWidth, width) 是比较了容器宽度和根据音频时长等计算出的长度，取最大值。
+                // 那么会在当前的音频分段时长大小(例子是2M音频的时长)所能产生的波形长度小于容器的宽度时
+                // 出现为了充满容器下面的 this.backend.getPeaks 方法在实际产生的波形信息后面添加不等位数的 0，从而充满容器。
+                // 但是整个大音频的时长是固定的，根据大音频时长设定的canvas的个数和宽度已经固定
+                // 如果分段加载之后最后一段如果出现被补0的情况，在最终合并的完整的波形信息就会超过原本设定的预值，导致挤压最终产生的波形
+                let end = width;
+
+                if (
+                    this.params.fillParent
+                    &amp;&amp; (!this.params.scrollParent || nominalWidth &lt; parentWidth)
+                ) {
+                    width = parentWidth;
+                }
+
+                const peaks = this.backend.getPeaks(width, start, end);
+                // 通过回调函数的方式把 peaks 传递出去
+                callback(peaks);
+                // 清空 arraybuffer 避免占用过多内存
+                this.arraybuffer = null;
+                this.backend.buffer = null;
+            }
+        },
+        () =&gt; this.fireEvent(&#39;error&#39;, &#39;Error decoding audiobuffer&#39;)
+    );
+}
+
+// 加载所有的波形信息产生可视化canvas
+loadPeaks(peaks) {
+    this.backend.buffer = null;
+    this.backend.setPeaks(peaks);
+    this.drawBuffer();
+    this.fireEvent(&#39;waveform-ready&#39;);
+    this.isReady = true;
+}</code></pre>
+<p>增强了 wavesurfer 的能力之后就需要在业务中调用了~~</p>
+<h4 id="调用扩展能力，整合波形信息，渲染并上传保存"><a href="#调用扩展能力，整合波形信息，渲染并上传保存" class="headerlink" title="调用扩展能力，整合波形信息，渲染并上传保存"></a>调用扩展能力，整合波形信息，渲染并上传保存</h4><pre><code class="js">import _ from &#39;lodash&#39;;
+import pako from &#39;pako&#39;; // JS压缩以及解压缩三方库
+import WaveSurfer from &#39;wavesurfer.js&#39;;
+import requestWav from &#39;requestWav&#39;;
+
+const waveSurfer = null;
+const peaksList = [];
+const texture = null;
+
+function initWaveSurfer() {
+    const options = {
+        container: &#39;#waveform&#39;,
+        backend: &#39;MediaElement&#39;,
+        fillParent: false, // 重要
+        height: 200,
+        barHeight: 10,
+        normalize: true,
+        minPxPerSec: 100,
+    }
+    waveSurfer = WaveSurfer.create(options);
+    renderWaveSurfer();
+}
+
+function renderWaveSurfer() {
+    waveSurfer.load(source, [], &#39;none&#39;);
+    if (!texture) {
+        decodePeaks();
+    }
+}
+
+function decodePeaks() {
+    const that = this;
+    requestWav.loadBlocks(&#39;音频Url&#39;, {
+        loadRangeSucess(data, index) {
+            // 每一段加载完成之后的回调
+            peaksList[index - 1] = [];
+            // 调用扩展的 waveSurfer 方法获取每一段音频的 peaks
+            waveSurfer.getPeaks(data, (peaks) =&gt; {
+                peaksList[index - 1] = peaks;
+            });
+        },
+        loadAllSucess() {
+            // 所有都加载完之后的回调
+            let texture = _.flatten(peaksList); // peaksList 降维
+            if (!texture) {
+                return;
+            }
+            // 按照一定等级进行压缩 (减少传输时间，但是同时需要之后在下载使用波形信息的时候解压)
+            waveSurfer.texture = pako.deflate(JSON.stringify(texture), { level: 9, to: &#39;string&#39; });
+            // 解压和压缩的方法是相反的
+            // const texture = pako.deflate(JSON.stringify(waveSurfer.texture), { level: 9, to: &#39;string&#39; });
+
+            // 手动置空变量, 避免占用内存过大
+            texture = null;
+            // 创建上传 FormData
+            const peaksFile = new FormData();
+            peaksFile.append(&#39;sourceUrl&#39;, 音频的URL地址);
+            // 创建上传文件 Blob
+            const blob = new Blob([waveSurfer.texture], { type: &#39;application/json&#39; });
+            // 赋值文件名、文件内容
+            peaksFile.append(&#39;sourcePeaks&#39;, blob, &#39;sourcePeaks&#39;);
+            axios({
+                method: &#39;post&#39;,
+                url: &#39;上传地址&#39;,
+                data: peaksFile,
+                headers: {
+                    &#39;Content-Type&#39;: &#39;multipart/form-data&#39;,
+                },
+                timeout: 1000000, // 防止文件过大上传超时，当然不设置也可
+            });
+        },
+    });
+}</code></pre>
+<p>至此 5个步骤全部完成，剩下的只有在二次请求相同资源的时候判断如果已经存储了当前wav资源的波形信息就不用再一次执行一次 decode 产生波形的操作。</p>
+<h5 id="2020年补充"><a href="#2020年补充" class="headerlink" title="2020年补充"></a>2020年补充</h5><p>补充一个之前小伙伴使用发现的问题:</p>
+<p>在分片请求的过程中，如果分片太大，在每一片去使用 decode 产生 peaks 的过程中，如果之前的片段没有完成，而后面的片段缺先完成了，会导致最终在拼接 peaks 的时候，缺少中间某些片段的 peaks。主要会发生在 decode 最后一片的时候，可能最后一片没有达到分片的大小，会被快速的 decode，从而产生这样的问题。</p>
+<p>综上呢，有三个解决的办法：</p>
+<p>1、尽可能的降低下分片的大小，推荐5M以下<br>2、在每一次 decode 完成之后，比对以下分片的数量以及已经完成 decode 的数量，一致的话，再按照索引拼接起来<br>3、确保上一次 decode 之后，在 decode 之后的</p>
+<p>具体的代码，不在进行阐述，个人感觉比较简单~</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;JavaScript三方库</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "wavesurfer 处理大音频文件波形渲染(二)&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

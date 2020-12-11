@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>JavaScript 原型和原型链(继承) ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期三, 八月 7日 2019, 8:20 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>原型和原型链是让 JavaScript 在众多语言中稍显独特的一个方面，了解原型和原型链是前端的必备技能了。但是说到原型和原型链，那么距离继承就不是很远了，这篇文章是对原型和原型链的一个总结，中间也会掺杂继承相关的内容。</p>
+<a id="more"></a>
+
+<p>emmmm，那么先从类说起吧~</p>
+<h3 id="类与原型"><a href="#类与原型" class="headerlink" title="类与原型"></a>类与原型</h3><h4 id="类"><a href="#类" class="headerlink" title="类"></a>类</h4><p>了解过后端语言(类似: Java、C++)的小伙伴都应该知道，它们的继承都是基于类的继承。</p>
+<blockquote>
+<p>类是面向对象（Object Oriented）语言实现信息封装的基础，称为类类型。每个类包含数据说明和一组操作数据或传递消息的函数。类的实例称为对象。是描述了一种代码的组织结构形式，一种在软件中对真实世界中问题领域的建模方法。</p>
+</blockquote>
+<p>写法是这样的:</p>
+<pre><code class="java">public class Parent {
+    private String name;  
+    private int id;
+
+    public Parent(String myName, int myId) {
+        name = myName;
+        id = myId;
+    }
+    /* something */
+}
+
+public class Child extends Parent {
+    public Penguin(String myName, int myId) {
+        super(myName, myId);
+    }
+    /* something */
+}</code></pre>
+<p>在 ES6 之后，<code>class</code>的语法在 JavaScript 中也得到了支持，只是这个<code>class</code>和面向对象语言中的类是不同的。虽说写法差不多，但是最终转化为 ES5 代码之后仍然是通过原型和原型链实现的。</p>
+<h4 id="原型"><a href="#原型" class="headerlink" title="原型"></a>原型</h4><p><img src="/img/js/%E5%8E%9F%E5%9E%8B%E5%92%8C%E5%8E%9F%E5%9E%8B%E9%93%BE.png" alt="原型和原型链"></p>
+<p>上面的图就简单的描述了一个原型和原型链，有 <strong>3</strong> 个概念:</p>
+<ul>
+<li>构造函数: JS中所有函数都可以作为构造函数，前提是被 new 操作符操作</li>
+<li>实例: 由构造函数 new 出来的结果</li>
+<li>原型对象: 构造函数有一个 prototype 属性，这个属性会指向<strong>原型</strong>对象</li>
+</ul>
+<p>它们之间的关系在图上也有说明:</p>
+<ul>
+<li>通过构造函数 <code>new</code> 出来的是一个实例</li>
+<li>构造函数有一个 <code>prototype</code> 属性指向<strong>原型</strong>对象</li>
+<li>原型对象又有 <code>constructor</code> 属性指回了构造函数</li>
+<li>实例对象和原型对象是通过 <code>__proto__</code> 连接起来的</li>
+</ul>
+<p>那么<strong>原型链</strong>就来了———从一个对象中去找一个属性，如果在当前对象中没有找到，那么会通过当前对象的<code>__proto__</code>属性一直往上找原型对象上是否有这个属性，直到找到 Object 对象还没有找到该属性，才证明这个属性是不存在，否则只要找到了，那么这个属性就是存在的，从这里可以看出 JS 对象和原型对象的关系就像一条链条一样，这个称之为原型链</p>
+<h3 id="继承"><a href="#继承" class="headerlink" title="继承"></a>继承</h3><p>说完原型链肯定紧跟着就来了继承。JavaScript 的继承就是依靠原型和原型链来维持实现的。</p>
+<p>先来几个一般的继承实现:</p>
+<h4 id="构造函数继承"><a href="#构造函数继承" class="headerlink" title="构造函数继承"></a>构造函数继承</h4><pre><code class="js">function Parent(){
+    this.name = &#39;parent1&#39;;
+}
+
+Parent.prototype.say = function() { /* something */ }
+
+function Child() {
+    Parent.call(this); // apply 也可以 更改this指向
+    this.type = &#39;child1&#39;;
+}</code></pre>
+<p>这种方式的缺点是 子类是没有继承父类的 prototype 上的属性和方法。</p>
+<h4 id="原型链继承"><a href="#原型链继承" class="headerlink" title="原型链继承"></a>原型链继承</h4><pre><code class="js">function Parent(){
+    this.name = &#39;parent2&#39;;
+}
+Parent.prototype.say = function() { /* something */ }
+function Child() {
+    this.type = &#39;child2&#39;;
+}
+Child.prototype = new Parent(); // 把父类的实例赋值给子类的prototype，即子类的实例的 __proto__</code></pre>
+<p>这种方式的缺点是 一旦更改了根据子类创建的某一个实例的某一个继承自原型对象上的属性，那么所有的实例的这个属性都会改变，因为他们公用了一个原型对象。</p>
+<h4 id="组合继承"><a href="#组合继承" class="headerlink" title="组合继承"></a>组合继承</h4><pre><code class="js">function Parent(){
+    this.name = &#39;parent3&#39;;
+}
+
+function Child() {
+    Parent.call(this); // apply 也可以
+    this.type = &#39;child3&#39;;
+}
+Child.prototype = new Parent();</code></pre>
+<p>这种方式解决了之前原型链继承和构造函数继承的不足。<br>但是这种方式执行了<strong>两次</strong>父类的初始化，且父类和子类的 prototype 是同一个。重写了 Child 的原型对象，因此给子类添加原型方法必须在替换原型之后。</p>
+<h4 id="寄生组合式继承"><a href="#寄生组合式继承" class="headerlink" title="寄生组合式继承"></a>寄生组合式继承</h4><pre><code class="js">function Parent(){
+    this.name = &#39;parent3&#39;;
+}
+
+function Child() {
+    Parent.call(this); // apply 也可以
+    this.type = &#39;child3&#39;;
+}
+// 解决父类和子类prototype是同一个
+// const obj = {};
+// obj.__proto__ = Parent.prototype;
+// Child.prototype = obj;
+Child.prototype = Object.create(Parent.prototype);
+
+//  Object.setPrototypeOf(Child.prototype, Parent.prototype);
+// 解决子类的 constructor 指向父类
+Child.prototype.constructor = Child;
+
+// 此处的 setPrototypeOf 可以获取到父级的 静态方法 到子级，babel转译的时候会看到这样一个优化
+Object.setPrototypeOf(Child, Parent);
+
+Child.prototype.fn = function() {};
+Child.prototype.attr = &#39;属性值&#39;;</code></pre>
+<p>这是目前在 ES5 时代最好的办法了，但是只能在更改 Child 的 prototype 之后 给子类型原型添加属性和方法。</p>
+<h4 id="ES6-class继承"><a href="#ES6-class继承" class="headerlink" title="ES6 class继承"></a>ES6 class继承</h4><p>ES6 的 class 关键字是真的方便了JS的继承方式。但是这仅仅是一个语法糖，内部的实现仍然是<code>寄生组合式继承</code></p>
+<pre><code class="js">// es6 代码
+class Parent {
+}
+
+class Child extends Parent {
+    constructor() {
+        super()
+    }
+}
+
+// 经过babel(v7.5.0)转换成浏览器可解析代码
+function _inherits(subClass, superClass) {
+  /* something... */
+  // 给子级的prototype赋值
+  subClass.prototype = Object.create(superClass &amp;&amp; superClass.prototype, {
+    // 增强对象，弥补因重写原型而失去的默认的 constructor 
+    constructor: { value: subClass, writable: true, configurable: true }
+  });
+  // 指定子级的原型对象为父级，串起一个链
+  if (superClass) _setPrototypeOf(subClass, superClass);
+}
+
+function _setPrototypeOf(o, p) {
+  _setPrototypeOf =
+    Object.setPrototypeOf ||
+    function _setPrototypeOf(o, p) {
+      o.__proto__ = p;
+      return o;
+    };
+  return _setPrototypeOf(o, p);
+}</code></pre>
+<p>原型和原型链是 JavaScript 实现继承的基础，明白其中的关系就能更好的编写出复用性代码~~</p>
+<p>最后贴出一张大佬<a href="https://www.cnblogs.com/wangfupeng1988/p/3979533.html" target="_blank" rel="noopener">王福朋</a>整理的一张图，其中描述的是原型到原型链的整体流向。</p>
+<p><img src="/img/js/%E5%8E%9F%E5%9E%8B%E9%93%BE.png" alt="原型与原型链"></p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;JavaScript</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "JavaScript 原型和原型链(继承)&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

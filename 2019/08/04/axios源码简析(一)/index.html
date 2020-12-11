@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>axios 源码简析(一) ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期日, 八月 4日 2019, 7:12 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>Promise based HTTP client for the browser and node.js —— 基于 Promise 的 HTTP 库，可以用在浏览器和 NodeJs 中</p>
+<a id="more"></a>
+
+<h3 id="特点-能力"><a href="#特点-能力" class="headerlink" title="特点(能力)"></a>特点(能力)</h3><ul>
+<li>支持从浏览器中创建 XMLHttpRequests</li>
+<li>支持从 NodeJs 创建 http 请求</li>
+<li>支持 Promise API</li>
+<li>拦截请求和响应</li>
+<li>转换请求数据和响应数据，自动转换 JSON 数据</li>
+<li>取消请求</li>
+<li>客户端支持防御 XSRF</li>
+</ul>
+<p>目前 axios 使用范围非常广泛，前端开发者一般使用它来做 AJAX 请求，完成前后端数据交互。所以本篇文章主要分析在浏览器端的 axios 部分实现逻辑，包括</p>
+<ul>
+<li><a href="#如何实现多种调用方式">多种调用方式的实现</a></li>
+<li><a href="#从-config-配置参数入手吧">配置的多处传递的实现</a></li>
+<li><a href="#拦截器">拦截器的实现</a></li>
+<li><a href="/2019/08/06/axios源码简析(二)/#transformData">转换请求数据和响应数据、自动转换 JSON 数据的实现</a></li>
+<li><a href="/2019/08/06/axios源码简析(二)/#取消请求">取消请求的实现</a></li>
+</ul>
+<h4 id="目录结构"><a href="#目录结构" class="headerlink" title="目录结构"></a>目录结构</h4><p><img src="/img/axios/%E7%9B%AE%E5%BD%95%E7%BB%93%E6%9E%84.png" alt="目录结构"></p>
+<h4 id="如何实现多种调用方式"><a href="#如何实现多种调用方式" class="headerlink" title="如何实现多种调用方式"></a>如何实现多种调用方式</h4><p>经常使用 axios 的小伙伴都应该知道 axios 的一些使用方式， 比如:</p>
+<pre><code class="js">import axios from &#39;axios&#39;;
+
+axios(config) // 直接传入配置
+axios(url[, config]) // 传入url和配置
+axios[method](url[, option]) // 直接调用请求方式方法，传入url和配置
+axios[method](url[, data[, option]]) // 直接调用请求方式方法，传入data、url和配置
+axios.request(option) // 调用 request 方法
+
+const axiosInstance = axios.create(config)
+// axiosInstance 也具有以上 axios 的能力
+
+axios.all([axiosInstance1, axiosInstance2]).then(axios.spread(response1, response2))
+// 调用 all 和传入 spread 回调</code></pre>
+<p>针对以上多种使用方法，axios 内部实际上是在对外暴露接口的文件 axios.js 中体现的</p>
+<pre><code class="js">function createInstance(defaultConfig) {
+  var context = new Axios(defaultConfig);
+
+  // instance指向了request方法，且上下文指向context，所以可以直接以 instance(option) 方式调用 
+  // Axios.prototype.request 内对第一个参数的数据类型判断，使我们能够以 instance(url, option) 方式调用
+  var instance = bind(Axios.prototype.request, context);
+
+  // Copy axios.prototype to instance
+  // 把Axios.prototype上的方法扩展到instance对象上，
+  // 并指定上下文为context，这样执行Axios原型链上的方法时，this会指向context
+  utils.extend(instance, Axios.prototype, context);
+
+  // Copy context to instance
+  // 把context对象上的自身属性和方法扩展到instance上
+  // 注：因为extend内部使用的forEach方法对对象做for in 遍历时，只遍历对象本身的属性，而不会遍历原型链上的属性
+  // 这样，instance 就有了  defaults、interceptors 属性。
+  utils.extend(instance, context);
+  return instance;
+}
+
+// Create the default instance to be exported 创建一个由默认配置生成的axios实例
+var axios = createInstance(defaults);
+
+// Factory for creating new instances 扩展axios.create工厂函数，内部也是 createInstance
+axios.create = function create(instanceConfig) {
+  return createInstance(mergeConfig(axios.defaults, instanceConfig));
+};
+
+// Expose all/spread
+axios.all = function all(promises) {
+  return Promise.all(promises);
+};
+
+axios.spread = function spread(callback) {
+  return function wrap(arr) {
+    return callback.apply(null, arr);
+  };
+};
+
+module.exports = axios;</code></pre>
+<p>主要核心是 <code>Axios.prototype.request</code>,各种请求方式的调用实现都是在 <code>request</code> 内部实现的，<br>简单看下 <code>request</code> 的逻辑</p>
+<pre><code class="js">Axios.prototype.request = function request(config) {
+  // Allow for axios(&#39;example/url&#39;[, config]) a la fetch API
+  // 判断 config 参数是否是 字符串，如果是则认为第一个参数是 URL，第二个参数是真正的config
+  if (typeof config === &#39;string&#39;) {
+    config = arguments[1] || {};
+    // 把 url 放置到 config 对象中，便于之后的 mergeConfig
+    config.url = arguments[0];
+  } else {
+    // 如果 config 参数是否是 字符串，则整体都当做config
+    config = config || {};
+  }
+  // 合并默认配置和传入的配置
+  config = mergeConfig(this.defaults, config);
+  // 设置请求方法
+  config.method = config.method ? config.method.toLowerCase() : &#39;get&#39;;
+  /*
+    something... 此部分会在后续拦截器单独讲述
+  */
+};
+
+// 在 Axios 原型上挂载 &#39;delete&#39;, &#39;get&#39;, &#39;head&#39;, &#39;options&#39; 且不传参的请求方法，实现内部也是 request
+utils.forEach([&#39;delete&#39;, &#39;get&#39;, &#39;head&#39;, &#39;options&#39;], function forEachMethodNoData(method) {
+  Axios.prototype[method] = function(url, config) {
+    return this.request(utils.merge(config || {}, {
+      method: method,
+      url: url
+    }));
+  };
+});
+
+// 在 Axios 原型上挂载 &#39;post&#39;, &#39;put&#39;, &#39;patch&#39; 且传参的请求方法，实现内部同样也是 request
+utils.forEach([&#39;post&#39;, &#39;put&#39;, &#39;patch&#39;], function forEachMethodWithData(method) {
+  Axios.prototype[method] = function(url, data, config) {
+    return this.request(utils.merge(config || {}, {
+      method: method,
+      url: url,
+      data: data
+    }));
+  };
+});</code></pre>
+<h4 id="从-config-配置参数入手吧"><a href="#从-config-配置参数入手吧" class="headerlink" title="从 config 配置参数入手吧"></a>从 config 配置参数入手吧</h4><p>config 配置应该是贯穿了 axios 的”一生”，从入口的axios.js中的 <code>createInstance</code> 到真实的请求方法 <code>Axios.prototype.request</code>，所以我们目前就跟着它走着吧~</p>
+<p>axios 中的 config 主要分布在这几个地方:</p>
+<ul>
+<li>默认配置 <code>defaults.js</code></li>
+<li>config.method 默认为 <code>get</code></li>
+<li>调用 <code>createInstance</code> 方法创建 axios 实例，传入的config</li>
+<li>直接或间接调用 <code>request</code> 方法，传入的 config</li>
+</ul>
+<p>这四处之间的优先级关系如下:</p>
+<p><img src="/img/axios/config.png" alt="配置优先级"></p>
+<p>具体体现在源码中:</p>
+<pre><code class="js">// axios.js
+// 创建一个由默认配置生成的axios实例
+var axios = createInstance(defaults);
+
+// 扩展axios.create工厂函数，内部也是 createInstance
+axios.create = function create(instanceConfig) {
+  return createInstance(mergeConfig(axios.defaults, instanceConfig));
+};
+
+// Axios.js
+// 合并默认配置和传入的配置
+config = mergeConfig(this.defaults, config);
+// 设置请求方法
+config.method = config.method ? config.method.toLowerCase() : &#39;get&#39;;</code></pre>
+<h4 id="真实请求的-request"><a href="#真实请求的-request" class="headerlink" title="真实请求的 request"></a>真实请求的 request</h4><p>在之前介绍的 axios 使用方法和配置 config 流转时，已经引出了 <code>Axios.prototype.request</code> 方法，这是 Axios 的一个核心方法，下面就针对这个核心方法进行分析</p>
+<pre><code class="js">Axios.prototype.request = function request(config) {
+  /*
+    先是 mergeConfig ... 等，不再阐述
+  */
+  // Hook up interceptors middleware 创建拦截器链. dispatchRequest 是重中之重，后续重点
+  var chain = [dispatchRequest, undefined];
+
+  // push各个拦截器方法 注意：interceptor.fulfilled 或 interceptor.rejected 是可能为undefined
+  this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
+    // 请求拦截器逆序 注意此处的 forEach 是自定义的拦截器的forEach方法
+    chain.unshift(interceptor.fulfilled, interceptor.rejected);
+  });
+
+  this.interceptors.response.forEach(function pushResponseInterceptors(interceptor) {
+    // 响应拦截器顺序 注意此处的 forEach 是自定义的拦截器的forEach方法
+    chain.push(interceptor.fulfilled, interceptor.rejected);
+  });
+
+  // 初始化一个promise对象，状态为resolved，接收到的参数为已经处理合并过的config对象
+  var promise = Promise.resolve(config);
+
+  // 循环拦截器的链
+  while (chain.length) {
+    promise = promise.then(chain.shift(), chain.shift()); // 每一次向外弹出拦截器
+  }
+  // 返回 promise
+  return promise;
+};</code></pre>
+<p>可能这段代码看上去用到了<code>promise</code>、<code>interceptors</code>，有一点迷茫。<br>那么我们先说<code>promise</code>，这是JavaScript为了解决异步回调炼狱问题所提出的一个解决方案，目前已经是前端必备技能，如果有小伙伴不太清楚，自行 Google下？~<br>然后是<code>interceptors</code>，这就是文章开头所说的拦截请求和响应所用到的一个利器————<strong><em>拦截器</em></strong>。</p>
+<h5 id="拦截器"><a href="#拦截器" class="headerlink" title="拦截器"></a>拦截器</h5><p>拦截器的作用是能在我们发起请求之前针对已经流转到此时的 <code>config</code> 进行再次加工，在我们得到结果之前对已经请求到的结果进行拦截处理。官方给出的时机是 <code>then</code>或者 <code>catch</code> 之前。</p>
+<p>可以看到的是使用拦截器的时候，直接用的<code>this.interceptors</code>，那么说明它就是 axios 实例上的一个属性，它的初始化是在 <code>Axios.js</code>，有 <code>request</code> 和 <code>response</code> 2 个属性。</p>
+<pre><code class="js">function Axios(instanceConfig) {
+  this.defaults = instanceConfig;
+  this.interceptors = {
+    request: new InterceptorManager(), // 请求拦截
+    response: new InterceptorManager() // 响应拦截
+  };
+}</code></pre>
+<p>它的定义是在<code>InterceptorManager.js</code>，它们都有一个 <code>use</code> 方法，<code>use</code> 方法支持 2 个参数，第一个参数类似 Promise 的 <code>resolve</code> 函数，第二个参数类似 Promise 的 <code>reject</code> 函数。我们可以在 <code>resolve</code> 函数和 <code>reject</code> 函数中执行同步代码或者是异步代码逻辑。</p>
+<pre><code class="js">// 拦截器的初始化 其实就是一组钩子函数
+function InterceptorManager() {
+  this.handlers = [];
+}
+
+// 调用拦截器实例的use时就是往钩子函数中push方法
+InterceptorManager.prototype.use = function use(fulfilled, rejected) {
+  this.handlers.push({
+    fulfilled: fulfilled,
+    rejected: rejected
+  });
+  return this.handlers.length - 1;
+};
+
+// 拦截器是可以取消的，根据use的时候返回的ID，把某一个拦截器方法置为null
+// 不能用 splice 或者 slice 的原因是 删除之后 id 就会变化，导致之后的顺序或者是操作不可控
+InterceptorManager.prototype.eject = function eject(id) {
+  if (this.handlers[id]) {
+    this.handlers[id] = null;
+  }
+};
+
+// 这就是在 Axios的request方法中 中循环拦截器的方法 forEach 循环执行钩子函数
+InterceptorManager.prototype.forEach = function forEach(fn) {
+  utils.forEach(this.handlers, function forEachHandler(h) {
+    if (h !== null) {
+      fn(h);
+    }
+  });
+};</code></pre>
+<p>了解了拦截器是什么之后，就要回到<code>request</code>中，来看拦截器是如何工作的。之前对于拦截器，我们知道请求拦截器方法是被 <code>unshift</code>到拦截器中，响应拦截器是被<code>push</code>到拦截器中的。最终它们会拼接上一个叫<code>dispatchRequest</code>的方法被后续的 promise 顺序执行。</p>
+<p>拼接的结果是如下的一个链:</p>
+<pre><code class="js">[
+  请求拦截器2的resolve,
+  请求拦截器2的reject,
+  请求拦截器1的resolve,
+  请求拦截器1的reject,
+  dispatchRequest,
+  undefined,
+  响应拦截器1的resolve,
+  响应拦截器1的reject,
+  响应拦截器2的resolve,
+  响应拦截器2的reject,
+]</code></pre>
+<p><img src="/img/axios/interceptor.png" alt="拦截器"></p>
+<p>因此拦截器的执行顺序是链式依次执行的方式。对于 <code>request</code> 拦截器，后添加的拦截器会在请求前的过程中先执行；对于 <code>response</code> 拦截器，先添加的拦截器会在响应后先执行。</p>
+<p>在构造了这么一个 <code>PromiseChain</code> 之后，我们可以看到两边是拦截器的处理函数，中间是一个 <code>dispatchRequest</code>，这个是 axios 真真真正发起一个请求的地方，之后会进行详细介绍。</p>
+<p>接下来定义一个已经 resolve 了 config 的 promise，循环这个 chain，拿到每个拦截器对象，把它们的 resolved 函数和 rejected 函数添加到 promise.then 的参数中，这样就相当于通过 Promise 的链式调用方式，最终返回一个promise，实现了拦截器一层层的链式调用的效果。</p>
+<p>至此前半部分告一段落，接下来会对<code>dispatchRequest</code>和数据转换以及取消请求等附属的功能进行分析。</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;JavaScript三方库</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "axios 源码简析(一)&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

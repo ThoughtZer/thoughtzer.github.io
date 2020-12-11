@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>React 的 Hook 们 ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期四, 九月 26日 2019, 8:20 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>React 在 v16.8 版本中正式推出了 Hooks，为函数式组件带来了“春天”。</p>
+<a id="more"></a>
+
+<p>本文简单介绍几个在项目中使用过的hook。</p>
+<h3 id="useState"><a href="#useState" class="headerlink" title="useState"></a>useState</h3><p>以往class写法定义状态需要挂载到<code>this.state</code>上，在使用函数式组件的时候不能定义状态。useState让不可能变成了可能。</p>
+<pre><code class="js">// 声明 value 以及 设置 value 的方法 setValue
+const [value, setValue] = useState(&#39;initVal&#39;);
+
+// 之后在JSX以及组件内部就可以使用变量以及设置方法</code></pre>
+<h3 id="useEffect"><a href="#useEffect" class="headerlink" title="useEffect"></a>useEffect</h3><p>直译中文就是副作用钩子。默认情况下赋值给 useEffect 的函数会在组件渲染之后执行。当然也可以传递参数执行在某一些值变化之后执行，有点类似于 Vue 的 watch，(当然Vue的3.0版本可能也会更改为Effect)~</p>
+<pre><code class="js">// 在每一次渲染之后执行
+useEffect(() =&gt; {
+  // do something
+});
+
+// 在第二个参数数组中的数值变化后就执行
+useEffect(() =&gt; {
+  // when variable1 or variable2 was changed, do something
+}, [variable1, variable2, ...]);
+
+// 组件卸载时需要清除 effect 中的副作用
+useEffect(() =&gt; {
+  const timer = setTimeout(() =&gt; {}, 1000);
+  return () =&gt; {
+    clearTimeout(timer)
+  }
+}, []);</code></pre>
+<p>useEffect 的执行时机和 class 写法的<code>componentDidMount</code>、<code>componentDidUpdate</code>有很大契合，但是也有不同的地方，官方给出了详细的解释，<a href="https://reactjs.org/docs/hooks-reference.html#timing-of-effects" target="_blank" rel="noopener">传送门</a>。</p>
+<h3 id="useCallback"><a href="#useCallback" class="headerlink" title="useCallback"></a>useCallback</h3><p>使用 useCallback 传递一个回调函数，可以返回一个被记忆的回调函数。且只会在依赖项发生变化的时候，重新更新回调函数，当我们在传递回调给子组件的时候，这将大有用处: 即使本次父组件由于依赖的更新而重新执行了 <code>render</code>，那么这个回调的 props 不会重新生成，那么在进行了引用相等性判断了的子组件接收这个回调 props 不会再次渲染</p>
+<pre><code class="js">// 如果没有特别的需要，推荐都使用 useCallback 处理函数
+const memoizedCallback = useCallback(() =&gt; {
+  doSomething(a, b);
+}, [a, b]);</code></pre>
+<h3 id="useMemo"><a href="#useMemo" class="headerlink" title="useMemo"></a>useMemo</h3><p>使用 useMemo 传递一个有返回值的回调函数，则回调函数的返回值会是一个被记忆的值，同 useCallback 返回一个被记忆的函数一致。</p>
+<pre><code class="js">const memoizedCallback = useCallback(() =&gt; {
+  doSomething(a, b);
+}, [a, b]);
+// 上面等同于
+const memoizedCallback = useMemo(() =&gt; () =&gt;{
+  doSomething(a, b);
+}, [a, b]);
+// 当然不仅限于函数
+const memoizedValue = useMemo(() =&gt; {
+  doSomething(a, b);
+  return {
+    ...
+  }
+}, [a, b]);</code></pre>
+<p>官方推荐: 先编写在没有 useMemo 的情况下也可以执行的代码 —— 之后再在你的代码中添加 useMemo。因为缓存太多的内容可能会造成危险，所以当达到某一临界值的时候，可能就不能记忆很久之前的值，需要重新计算。</p>
+<h3 id="useRef"><a href="#useRef" class="headerlink" title="useRef"></a>useRef</h3><p>也许 ref 真的是毒药，毕竟像 React 这类 UI 库，不推荐我们再继续操作 DOM。但是这并不能囊括所有的场景，我们还是需要 ref 的，并且可能不仅仅是为了操作 DOM，比如需要在父组件执行子组件的方法时。需要注意的是当前 react 已经把获取到的实例放到了 ref 的 current 属性下。</p>
+<pre><code class="js">// 父组件
+const Parent = () =&gt; {
+  const domRef = useRef(null)
+  return (
+    &lt;&gt;
+      &lt;Child ref={domRef} /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+<h3 id="useImperativeHandle"><a href="#useImperativeHandle" class="headerlink" title="useImperativeHandle"></a>useImperativeHandle</h3><p>在说 useRef 的时候说到了需要在父组件中执行子组件的方法。那么就可能需要 useImperativeHandle 来帮忙了。useImperativeHandle 会在子组件内部通过接收在父组件中传递过来的 ref，绑定一些可执行方法，供父组件使用。需要注意的是 useImperativeHandle 需要 forwardRef 函数的帮助。</p>
+<pre><code class="js">// 父组件
+const Parent = () =&gt; {
+  const ChildRef = useRef(null)
+  // 父组件就可以使用 ChildRef 调用子组件方法
+  ChildRef.current.method_1();
+  return (
+    &lt;&gt;
+      &lt;Child ref={ChildRef} /&gt;
+    &lt;/&gt;
+  );
+}
+// 子组件
+const Child = forwardRef((props, ref) =&gt; {
+  useImperativeHandle(ref, () =&gt; {
+    return {
+      method_1: () =&gt; {},
+      method_2: () =&gt; {},
+    };
+  });
+  return (
+    ...
+  );
+})</code></pre>
+<p>个人感觉 useImperativeHandle 是一个有意思的 hook，让 Vue 的开发者可能会更喜欢~</p>
+<h3 id="useContext-和-useReducer"><a href="#useContext-和-useReducer" class="headerlink" title="useContext 和 useReducer"></a>useContext 和 useReducer</h3><p>useContext 和 useReducer 个人使用的情景不是很多，不在讲述~ 但是网上有人说可以代替 redux 的位置，emmmmmm，作为一个 react 的小白开发者，暂时觉得还是 redux 的全家桶在 react 中使用着更舒服、更流畅。</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;框架</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "React 的 Hook 们&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

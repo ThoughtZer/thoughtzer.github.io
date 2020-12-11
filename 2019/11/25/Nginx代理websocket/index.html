@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>Nginx 代理 ws/wss 请求 ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期一, 十一月 25日 2019, 12:00 凌晨</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>Nginx 一个强大的代理服务。Websocket 前后端持续通信的一种方案。</p>
+<a id="more"></a>
+
+<h4 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h4><p>近期项目中使用 websocket 实时传递录音数据到后端进行语义分析，且后端接口需要签名参数进行鉴权。由于前端浏览器中 WebSocket 对象不能在头信息中增添鉴权信息，所以最终采用: 前端传递给 node 服务，最终由 node 发起鉴权请求到实际处理接口。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/WEB98aab22f1d59ab4b41edbd37ff4a1837?method=getImage&version=12641&cstk=HQr78IvQ" alt="传输结构"></p>
+<p>中间的来回传递用到了 <a href="http://nginx.org/" target="_blank" rel="noopener">Nginx</a> 进行接口代理。</p>
+<h4 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h4><pre><code class="sh">server {
+    listen 443 ssl; #https和wss协议默认端口
+    # ssl的相关配置
+    ssl on;
+    ssl_certificate /xxxx/xxxx; # ssl pem文件地址
+    ssl_certificate_key /xxxx/xxxx; # ssl key文件地址
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers EECDH+CHACHA20:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:EECDH+3DES:RSA+3DES:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_buffer_size 1400;
+    add_header Strict-Transport-Security max-age=15768000;
+    add_header Cache-Control no-store;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+    server_name 域名;
+    # 转发wss协议
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        # 项目实际的地址，个人当前是一个后端SSR项目所以转走了，可以是单页面
+    }
+
+    location /wss {
+        proxy_pass http://127.0.0.1:9200;  # node的 ws 地址
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection &quot;Upgrade&quot;;
+        proxy_set_header X-Real-IP $remote_addr;
+
+        proxy_connect_timeout 1d;  # 超时时间 可以更改
+        proxy_send_timeout 1d;
+        proxy_read_timeout 1d;
+    }
+    # 转发https协议
+    location /api {
+        proxy_pass http://127.0.0.1:3000; # 以 /api 开头的其他的接口转发
+        proxy_set_header   X-Real-IP        $remote_addr;
+        proxy_set_header   X-Forwarded-For  $proxy_add_x_forwarded_for;
+    }
+}</code></pre>
+<p>这样的话，在访问 <code>域名/wss</code> 的时候就会转发到实际的 ws 地址(端口是9200)上去。访问<code>域名/api/xxx</code>会转发到端口是3000的服务上去。</p>
+<h4 id="另一种情况"><a href="#另一种情况" class="headerlink" title="另一种情况"></a>另一种情况</h4><p>有时候，可能会有一个单独的 ws/wss 服务，不能放在一个具体的域名下进行路由的转发。则就需要单独对这个 ws/wss 服务进行转发。</p>
+<p>在对 wss 服务转发的时候需要使用 Nginx 的 upstream 模块。</p>
+<pre><code class="sh">stream {
+  upstream https_ws {
+    server 127.0.0.1:9200; # 实际ws服务地址
+  }
+  server {
+    listen 9300 ssl; # 对外暴露9300，当然也可以使用单独的域名，配置server_name即可
+    ssl_certificate 证书地址;
+    ssl_certificate_key 证书key地址;
+
+    proxy_connect_timeout 1h;
+    proxy_timeout 1h;
+    proxy_pass https_ws; # 代理地址
+  }
+}</code></pre>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;计算机网络</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "Nginx 代理 ws/wss 请求&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

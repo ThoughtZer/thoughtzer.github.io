@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>webpack ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期五, 八月 16日 2019, 8:20 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>webpack 是一个现代 JavaScript 应用程序的静态模块打包工具。当 webpack 处理应用程序时，它会在内部构建一个 依赖图(dependency graph)，此依赖图会映射项目所需的每个模块，并生成一个或多个 bundle。</p>
+<a id="more"></a>
+
+<p>(PS: 本文使用的是 v4 版本的 webpack)</p>
+<h3 id="核心概念"><a href="#核心概念" class="headerlink" title="核心概念"></a>核心概念</h3><p>先从核心的概念说起吧~~</p>
+<ul>
+<li><strong>入口(entry)</strong> 是入口文件的配置，可以是一个文件，多个文件(数组)或者对象，作为 webpack 构建依赖图的开始</li>
+<li><strong>输出(output)</strong> 是 webpack 打包出 bundle 的出口，包含在哪里输出、输出什么文件名</li>
+<li><strong>loader</strong> 是提高 webpack 转化能力的高级接口(webpack 只识别Js和Json)，能帮助 webpack 识别更多的文件，并转换成有效的模块</li>
+<li><strong>插件(plugin)</strong> 是为了解决 loader 无法实现的其他事，比如打包优化，资源管理，注入环境变量…主要能开是监听 webpack 构建过程中的钩子函数，在特定的时间触发特性的事件</li>
+<li><strong>模式(mode)</strong> 是指 webpack 当前运行的环境，可以对不同环境下执行流程进行优化变更。(可选值: development, production 或 none)</li>
+<li><strong>Chunk</strong> 块，就像是堆积木的一个个单元(模块)，也可以是多个单元组成的一个单元(模块)。</li>
+</ul>
+<h3 id="流程"><a href="#流程" class="headerlink" title="流程"></a>流程</h3><p>了解了 webpack 的核心概念，那么再看下 webpack 的构建流程，之后会对流程中一些细节进行说明</p>
+<ul>
+<li>初始化参数：从配置文件<code>(webpack.config.js)</code>和 <code>Shell</code> 语句中读取与合并参数，得出最终的参数</li>
+<li>开始编译：用上一步得到的参数初始化 <code>webpack Compiler</code> 对象，加载所有配置的插件，执行对象的 run 方法开始执行编译</li>
+<li>确定入口：根据配置中的 <code>entry</code> 找出所有的入口文件</li>
+<li>编译模块：从入口文件出发，调用所有配置的 <code>Loader</code> 对模块进行翻译，再找出该模块依赖的模块，再递归本步骤直到所有入口依赖的文件都经过了本步骤的处理</li>
+<li>完成模块编译：在经过第4步使用 <code>Loader</code> 翻译完所有模块后，得到了每个模块被翻译后的最终内容以及它们之间的依赖关系(dependency graph)</li>
+<li>输出资源：根据入口和模块之间的依赖关系，组装成一个个包含多个模块的 <code>Chunk</code>，再把每个 <code>Chunk</code> 转换成一个单独的文件加入到输出列表</li>
+<li>输出完成：在确定好输出内容后，根据 <code>output</code> 配置确定输出的路径和文件名，把文件内容写入到文件系统</li>
+</ul>
+<p>一个简单的 <code>webpack.config.js</code> 配置内容:</p>
+<pre><code class="js">const path = require(&#39;path&#39;);
+
+module.exports = {
+    // entry:&#39;./src/js/main.js&#39;,
+    // entry:[&#39;./src/js/main.js&#39;,&#39;./src/js/a.js&#39;],
+    // entry 是入口文件的配置，可以是一个文件，多个文件(数组)或者对象
+    entry:{
+        main:&#39;./src/js/main.js&#39;,
+        a:&#39;./src/js/a.js&#39;
+    },
+    //output输出文件的存放位置和名称配置
+    output:{
+        path: path.resolve(__dirname, &#39;./dist/js&#39;),
+        // filename:&#39;bundle.js&#39;
+        filename:&quot;[name].bundle.js&quot;
+    },
+    module:{
+        rules: [
+            {
+                test: /\.js?$/,
+                loader: &#39;babel-loader&#39;,
+                exclude: /node_modules/, // 如果不去除node_modules则会导致打包编译速度过慢
+            },
+            // something...
+        ]
+    },
+    plugins: [
+        new CleanWebpackPlugin(), // 清除上一次打包结果(高版本不用传递参数)
+        new HtmlWebpackPlugin({
+            template: path.resolve(__dirname, &#39;./template/index.html&#39;), // 依据模板生成html
+        })
+    ],
+    resolve: {
+        extensions: [&#39;.js&#39;, &#39;.jsx&#39;, &#39;.vue&#39;], // 引入模块的时候扩展
+        mainFiles: [&#39;index&#39;, &#39;main&#39;], // 引入一个文件夹的时候默认寻找的文件开头名
+        alias: {
+            &#39;@&#39;: path.resolve(__dirname, &#39;../src&#39;),
+            &#39;common&#39;: path.resolve(__dirname, &#39;../src/common&#39;)
+        }
+    }
+};</code></pre>
+<blockquote>
+<p>注意:<br>在webpack配置文件中的路径，一般属于自己的文件系统的路径前面要加上<code>./</code>,否则 webpack 可能会去node_modules文件夹找依赖而报错</p>
+</blockquote>
+<h3 id="特别的能力"><a href="#特别的能力" class="headerlink" title="特别的能力"></a>特别的能力</h3><p>上面的一个 webpack 配置是一个很基础的打包功能，但是 webpack 的功能远不至此。一些另外的强大功能，也会让我们的开发变得更有效率</p>
+<h4 id="Babel-转译"><a href="#Babel-转译" class="headerlink" title="Babel 转译"></a>Babel 转译</h4><p><a href="https://babeljs.io/" target="_blank" rel="noopener">babel</a> 一个 JavaScript 编译器。配合 webpack 就能让我们使用最先进的 Js 语法进行编码，且产出浏览器可识别运行的 Js 代码。</p>
+<p>下载</p>
+<pre><code class="sh">npm install --save-dev babel-loader @babel/core
+npm install @babel/preset-env --save-dev</code></pre>
+<p>使用</p>
+<pre><code class="js">// webpack.config.js
+rules: [
+    {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        loader: &quot;babel-loader&quot;
+    }
+]
+// .babelrc
+{
+    &quot;presets&quot;: [&quot;@babel/preset-env&quot;]
+}</code></pre>
+<p>如果我们没有配置一些规则，Babel 默认只转换新的 JavaScript 句法，而不转换新的 API，比如 Iterator、Generator、Set、Maps、Proxy、Reflect、Symbol、Promise 等全局对象，以及一些定义在全局对象上的方法都不会转码。</p>
+<p>此时需要我们去引入另外的一些方法，去让 babel 支持以上所不能转换的操作。</p>
+<h5 id="babel-polyfill-amp-babel-runtime"><a href="#babel-polyfill-amp-babel-runtime" class="headerlink" title="babel-polyfill &amp; babel-runtime"></a>babel-polyfill &amp; babel-runtime</h5><p>babel-polyfill 会对当前的运行环境中没有实现的方法进行兼容垫片处理，但是他用的方法是全局变量，并且不管你有没有使用这个方法，都会为你处理，导致最后打包之后的结果文件体积增大。</p>
+<p>使用</p>
+<pre><code class="js">npm install --save @babel/polyfill
+// main.js  
+import &#39;@babel/polyfill&#39;;</code></pre>
+<p>在 Babel v7 版本之后，对 polyfill 进行了按需加载能力扩展。详见<a href="https://babeljs.io/docs/en/babel-preset-env#corejs" target="_blank" rel="noopener">官网</a></p>
+<pre><code class="js">npm install --save core-js@3  // @babel/polyfill 在 Babel v7.4 之后废弃，使用 core-js 替代
+
+// .babelrc
+{
+    &quot;presets&quot;: [
+        [&quot;@babel/preset-env&quot;, {
+            &quot;useBuiltIns&quot;: &quot;usage&quot;, // &quot;usage&quot; | &quot;entry&quot; | false defaults to false.
+            &quot;corejs&quot;: &quot;3&quot;,
+            &quot;modules&quot;: false,
+            &quot;targets&quot;: {
+                &quot;browsers&quot;: [&quot;&gt; 1%&quot;, &quot;last 2 versions&quot;, &quot;not ie &lt;= 8&quot;]
+            },
+        }]
+    ]
+}</code></pre>
+<p>babel-runtime 是采用其它方式实现新版 JavaScript 方法或者 API 能力的 Babel 扩展。它不会和 babel-polyfill 一样在全局作用域挂载。</p>
+<p>它包含两个 runtime 的扩展:</p>
+<ul>
+<li>@babel/runtime</li>
+<li>@babel/plugin-transform-runtime</li>
+</ul>
+<p>关于有两个 runtime 扩展原因是: runtime 扩展是在代码里面引入的各个 helper 函数，意味着代码里面可能有很多重复的垫片代码。plugin-transform-runtime 是把我们的代码里面需要兼容的那部分代码统一更换为一个名字，然后只实现这个被重写的需要兼容的垫片代码。<strong>后者会比前者打包产出相对少的代码</strong>。</p>
+<pre><code class="js">npm install --save-dev @babel/plugin-transform-runtime
+npm install --save @babel/runtime
+npm install --save @babel/runtime-corejs2
+// .babelrc
+{
+    &quot;plugins&quot;: [
+    [
+      &quot;@babel/plugin-transform-runtime&quot;,
+      {
+        &quot;corejs&quot;: 2,
+        &quot;helpers&quot;: true,
+        &quot;regenerator&quot;: true,
+        &quot;useESModules&quot;: false
+      }
+    ]
+  ]
+}</code></pre>
+<h4 id="devtool"><a href="#devtool" class="headerlink" title="devtool"></a>devtool</h4><p><a href="https://webpack.js.org/configuration/devtool/#root" target="_blank" rel="noopener">devtool</a> 是对 webpack 打包生成文件中是否包含 source map 的关键配置。有关 source map 简单理解就是 webpack 打包压缩代码之后和源码之间的一种映射关系。通过 source map 能快速的在浏览器的 debug 模式中找到存在问题的代码，从而进一步的调试。在官方文档中 devtool 支持 <strong>7</strong> 种模式，每一种模式的对比都有详尽的说明，不再进行阐述。</p>
+<p>在这里只关心两个常用的模式选项:</p>
+<p><code>cheap-module-eval-source-map</code> （开发环境推荐）</p>
+<p><code>cheap-module-source-map</code> （生产环境推荐）</p>
+<p>补充说明: 有的小伙伴也可以认为生产环境不能产出source-map，避免代码泄露，个人觉得每一种说法都有自己的道理，没有对与错，看各自项目的需要，适合自己的才是最好的。</p>
+<p>对于以上两个模式的选择原因进行简要说明:</p>
+<ul>
+<li><p>使用 cheap 模式可以大幅提高 soure map 生成的效率。大部分情况我们调试并不关心列信息，而且就算 source map 没有列，有些浏览器引擎（例如 v8） 也会给出列信息。</p>
+</li>
+<li><p>使用 eval 方式可大幅提高持续构建效率。官方文档提供的速度对比表格可以看到 eval 模式的编译速度很快。虽然不是很全面，但不影响使用。</p>
+</li>
+<li><p>使用 module 会去生成 node_module 里面的三方模块的 source map ，不仅仅关注业务代码。</p>
+</li>
+<li><p>使用 eval-source-map 模式可以减少网络请求。这种模式开启 DataUrl 本身包含完整 source map 信息，并不需要像 sourceURL 那样，浏览器需要发送一个完整请求去获取 source map 文件，这会略微提高点效率。而生产环境中则不宜用 eval，这样会让文件变得极大。</p>
+</li>
+</ul>
+<h4 id="自动刷新-gt-热更新"><a href="#自动刷新-gt-热更新" class="headerlink" title="自动刷新 -&gt; 热更新"></a>自动刷新 -&gt; 热更新</h4><p>在前端还没有进入构建工具的时代里，前端开发者对于开发过程中代码的调试都是在更改完成代码之后，手动刷新浏览器查看运行效果是否达到预期。或者使用 <code>live-server</code> 之类的模拟服务来达到自动刷新浏览器的目的。之后前端进入构建工具时代，webpack 带领我们走向了一个更加智能化的热更新道路。</p>
+<p>webpack 支持两个不同的自动刷新功能:</p>
+<ul>
+<li>–watch 监听到文件的变化就自动刷新浏览器。与 <code>live-server</code> 这类工具大致功能相同</li>
+<li>devServer 依赖于 webpack 强大的插件扩展系统，不仅仅能做到自动刷新，甚至于不刷新浏览器，只更新相关模块的变化。<strong>最重要的一点是能够解决前后端分离之后的开发过程中接口跨域问题</strong></li>
+</ul>
+<p>一个简单的 devServer 配置内容:</p>
+<pre><code class="js">devServer: {
+    contentBase: &#39;./dist&#39;, // 在哪里启动服务
+    open: true, // 自动打开浏览器
+    proxy: { // 接口转发
+        &#39;/api&#39;: {
+            target: &#39;&#39;, // 目标地址
+            changeOrigin: true, // 是否更改请求的 host origin
+            secure: false, // https or not
+            pathRewrite: {
+                &#39;/api&#39;: &#39;&#39;, // 是否转发之后把前缀更改
+            },
+            headers: { // 转发所携带的headers信息
+                host: &#39;&#39;,
+                cookie: &#39;&#39;
+            },
+            historyApiFallback: true, // 避免 SPA 应用刷新之后出现 404 找不到文件，因为 SPA 只有一个 html 文件。
+            // 此参数有很多其他选项，可参考官网 https://webpack.js.org/configuration/dev-server/#devserverhistoryapifallback
+        },
+    },
+    port: 9999, // 端口
+    hot: true. // 是否热更新
+    hotOnly: true, // 热更新出错是否继续
+}
+plugins: [
+    new webpack.HotModuleReplacementPlugin(), // 配合热更新插件
+]</code></pre>
+<p>关于热更新需要说明的是:<br>在 webpack 中，原始的热更新是需要在业务代码中去对 module.hot 进行判断只有再次对需要更新的文件进行移除、再引入等操作，才能达到热更新效果的。目前各种 webpack 的 loader 以及 babel 的 preset 已经对相关内容进行了处理，所以开发者在编写业务代码的时候，就无需再次进行编写这部分热更新逻辑。</p>
+<h4 id="eslint-代码风格检测"><a href="#eslint-代码风格检测" class="headerlink" title="eslint 代码风格检测"></a>eslint 代码风格检测</h4><p>eslint 能在一个项目中保证在代码风格的统一，对于一个团队来说这个是很重要的。</p>
+<pre><code class="js">npm install eslint -D
+
+// webpack.config.js
+{
+    test: /\.js$/,
+    use: [
+        &#39;babel-loader&#39;,
+        {
+            loader: &#39;eslint-loader&#39;,
+            options: {
+                fix: true, // 是否每次检测自动修复问题
+            },
+            force: &#39;pre&#39;, // 注意eslint-loader是配合babel-loader使用，但是一般都是在babel转译之前进行代码风格检测
+        },
+    ]
+}
+
+devServer: {
+    overlay: true, // 对于检测出来的错误信息是否放到浏览器页面中展示
+}</code></pre>
+<h4 id="环境-宏、全局-变量"><a href="#环境-宏、全局-变量" class="headerlink" title="环境(宏、全局)变量"></a>环境(宏、全局)变量</h4><p>前端工程化之后带来的不仅仅是模块化、组件化、自动编译等等这些便利。日常软件系统的开发大多数要经历<strong>开发</strong>、<strong>测试</strong>、<strong>预发布</strong>、<strong>线上</strong>多个环境的部署调试最终到达线上生产环境，环境的多变对于代码层面的分割就有一定的要求，可能就存在不同环境下需要打包不同的代码逻辑或者不同的依赖，所以环境变量也就可能需要被部分业务代码所依赖。</p>
+<ul>
+<li>mode</li>
+</ul>
+<p>在 webpack 中提供了一个 <a href="https://webpack.js.org/configuration/mode" target="_blank" rel="noopener">mode</a> 参数</p>
+<blockquote>
+<p>Possible values for mode are: none, development or production(default). 支持 none | development | production(默认) 三个选项</p>
+</blockquote>
+<p>这个参数在 webpack 打包开始的时候被注入，内部的 webpack 配置可以根据这个参数做不同的打包处理。但是这种方式有一定的局限性，不能在Js代码中获取相对应 mode 参数。</p>
+<ul>
+<li>DefinePlugin —— webpack 一个内置插件，可以用来实现类似于宏替换的功能。有时候我们不仅仅想在打包的过程中对一些变量进行判断，在业务里面也想使用，那么 DefinePlugin 就发挥作用了</li>
+</ul>
+<pre><code class="js">plugins: [
+  new webpack.DefinePlugin({
+    isDev: env.mode === &#39;development&#39;
+  }),
+],</code></pre>
+<p>之后在业务代码里面可以这样:</p>
+<pre><code class="js">if (isDev) {
+    /* something */
+}</code></pre>
+<p>但是要注意的是 DefinePlugin插件并不是定义了一个叫做isDev的变量，而是将代码中的 <code>isDev</code> 用编译时 <code>env.mode === &#39;development&#39;</code>表达式的值替换。（<strong>DefinePlugin做的是代码中的宏替换，不要把它当做定义变量来使用</strong>）所以编译之后的代码:</p>
+<pre><code class="js">// 如果 env.mode === &#39;development&#39;
+if (true) {
+    /* something */
+}
+// 如果 env.mode !== &#39;development&#39;
+if (false) {
+    /* something */
+}
+// 或者被直接删掉相关逻辑代码</code></pre>
+<p>这样的例子比较简单，有时候我们需要在代码中根据不同的版本请求不同的接口，一般来说在项目中的 package.json 中有 version 字段标明目前是第几个版本。就需要把这个版本当做一个宏注入到业务代码中进行使用:</p>
+<pre><code class="js">// webpack.config.js
+const version = require(&#39;./package.json&#39;).version;
+plugins: [
+  new webpack.DefinePlugin({
+    &#39;__VERSION__&#39;: version,
+  }),
+],
+
+// 业务代码模块
+const version = __VERSION__;
+export {version};</code></pre>
+<p>当然我们可以将 package.json 直接 import 进来然后将 version 属性导出，但是这么做会把整个 package.json 中的内容全都打包进模块，如果我们只是使用其中的 version 属性，那么打包一整个 package.json 文件也没必要。</p>
+<ul>
+<li>cross-env</li>
+</ul>
+<p><a href="https://github.com/kentcdodds/cross-env" target="_blank" rel="noopener">cross-env</a> 是一个跨平台的设置环境变量的脚本 (Cross platform setting of environment scripts)，跨平台指的是操作系统层面的~</p>
+<pre><code class="js">// package.json
+{
+  &quot;scripts&quot;: {
+    &quot;build&quot;: &quot;cross-env NODE_ENV=production webpack --config build/webpack.config.js&quot;
+  }
+}
+// webpack.config.js
+if (process.env.NODE_ENV === production) {
+    /* something */
+}
+// 配合 DefinePlugin
+plugins: [
+  new webpack.DefinePlugin({
+    &#39;process.env&#39;: {
+      NODE_ENV: JSON.stringify(process.env.NODE_ENV)
+    }
+  }),
+],</code></pre>
+<h4 id="代码优化"><a href="#代码优化" class="headerlink" title="代码优化"></a>代码优化</h4><h5 id="Tree-Shaking-摇树"><a href="#Tree-Shaking-摇树" class="headerlink" title="Tree Shaking 摇树"></a>Tree Shaking <a href="https://webpack.js.org/guides/tree-shaking/#root" target="_blank" rel="noopener">摇树</a></h5><p>简单来说 Tree Shaking 的能力就是把引入模块中没有用到的东西都删除掉，从而减小打包之后文件体积</p>
+<blockquote>
+<p>目前只支持 ESModule 静态引入方式(import), 且 webpack 的 development 模式下 Tree Shaking 没有开启</p>
+</blockquote>
+<ul>
+<li>开发环境 Tree Shaking</li>
+</ul>
+<p>由于开发环境默认是不启动状态，所以需要手动开启 Tree Shaking</p>
+<pre><code class="js">// webpack.config.js
+optimization: {
+    usedExports: true
+}</code></pre>
+<p>当然仅仅这样来做是不够的，因为 webpack 并不知道摇树之后会带来什么样的影响，所以 v4 版本的 webpack 提供了一个 <code>sideEffects</code> 标识来标记哪些文件是摇树会造成影响的。如果都没有影响则直接可以设为<code>false</code>，那么 webpack 就会放心大胆的处理文件了</p>
+<pre><code class="js">// package.json
+{
+  &quot;name&quot;: &quot;project-name&quot;,
+  &quot;sideEffects&quot;: false,
+  /*
+  如果有多个文件需要一一进行匹配配置
+  &quot;sideEffects&quot;: [
+      &quot;./src/some-side-effectful-file.js&quot;,
+      &quot;*.css&quot;
+  ]
+  */
+}</code></pre>
+<ul>
+<li>生产环境 自动开启, 但是 package.json 中 useEffects 必须要</li>
+</ul>
+<h5 id="Code-splitting-代码分割"><a href="#Code-splitting-代码分割" class="headerlink" title="Code splitting 代码分割"></a>Code splitting <a href="https://webpack.js.org/guides/code-splitting/#root" target="_blank" rel="noopener">代码分割</a></h5><p>代码分割的作用:<br>拆分出不经常更改的三方库或者独立逻辑，防止每次业务逻辑更改重新打包，用户多次请求相同的内容浪费资源</p>
+<ul>
+<li>splitChunks 插件拆分</li>
+</ul>
+<p>贴一个官网的简单配置，分析一下:</p>
+<pre><code class="js">// webpack.config.js
+optimization: {
+    splitChunks: {
+        chunks: &#39;all&#39;, // 同步异步引入都打包
+        &lt;!--以下配置可以自己选择性配置--&gt;
+        minSize: 30000, // 至少大于30kb
+        maxSize: 0, // 拆出的宝最大的大小配置，如果大于此值，会被再次拆分(一般不需要)
+        minChunks: 1, // 在打包生成之后的chunk里面被引入一次就算
+        maxAsyncRequests: 5, // 打包生成的文件最多是5个，多余5个不分
+        maxInitialRequests: 3, // 入口文件的拆分最多3个
+        automaticNameDelimiter: &#39;~&#39;, // 拆分出的包与主包之间名称连接符
+        name: true, // 自定义名称是否生效
+        cacheGroups: {
+            // 来自node_modelues中的包打一个
+            vendors: {
+                test: /[\\/]node_modules[\\/]/,
+                priority: -10,
+                filename: &#39;vendors.js&#39;,
+            },
+            // 不满足以上条件的包打一个
+            default: {
+                minChunks: 2,
+                priority: -20,
+                reuseExistingChunk: true, // 如果已经被打包过，则不在重复进行拆包
+            }
+        }
+    }
+}</code></pre>
+<ul>
+<li>动态引入拆分 (import语法)</li>
+</ul>
+<p>动态引入的意思就是在需要的时候引入(import导入语法返回一个 promise )，比如:</p>
+<pre><code class="js">if (条件为真) {
+    // 需要引入
+    import(&#39;third-party-module / other-module&#39;).then((module) =&gt; {
+        // something
+    })
+} else {
+    // 不需要引入
+}</code></pre>
+<p>在 webpack 中对这种方式的语法还进行了一种 Magic Comment 语法增强:</p>
+<pre><code class="js">import(/* webpackChunkName: &quot;lodash&quot; */ &#39;lodash&#39;).then(() =&gt; { /* something */ })</code></pre>
+<p>这种语法会把 import 引入的模块拆分到一个 webpackChunkName.bundle.js。并且多个模块可以配置相同的 webpackChunkName，从而更好的拆分代码。需要注意的是这种import 动态引入的语法是需要 babel 转译的支持的</p>
+<pre><code class="js">npm install @babel/plugin-syntax-dynamic-import -D</code></pre>
+<h5 id="预获取-预加载-prefetch-preload"><a href="#预获取-预加载-prefetch-preload" class="headerlink" title="预获取/预加载(prefetch/preload)"></a>预获取/预加载(prefetch/preload)</h5><p>webpack v4.6 之后添加了预获取和预加载的功能。在声明 import 时，使用 prefetch / preload 指令的 Magic Comment，可以让 webpack 输出 “resource hint(资源提示)”，来告知浏览器：</p>
+<ul>
+<li>prefetch(预获取)：将来某些导航下可能需要的资源</li>
+<li>preload(预加载)：当前导航下可能需要资源</li>
+</ul>
+<p>两者的具体的不同之处可以查看<a href="https://webpack.js.org/guides/code-splitting/#prefetchingpreloading-modules" target="_blank" rel="noopener">官方文档</a>。但是需要谨记的是一般会经常使用 prefetch 在浏览器闲置的情况下加载将来可能需要的资源！不正确地使用 preload 会有损性能。</p>
+<h5 id="CSS-的拆分与压缩"><a href="#CSS-的拆分与压缩" class="headerlink" title="CSS 的拆分与压缩"></a>CSS 的拆分与压缩</h5><p>之前所说的代码分割都是主要针对于 JavaScript 代码的操作，但是随着项目的进行文件可能越来越多，复杂度也随之上升，CSS也会逐渐增大，对 CSS 的拆分压缩处理也就不可避免了，当然为了提升开发效率，<strong>推荐在生产环境打包情况下进行此项操作</strong>。</p>
+<ul>
+<li>拆分(mini-css-extract-plugin)</li>
+</ul>
+<pre><code class="js">npm install mini-css-extract-plugin -D
+// webpack.config.js
+const MiniCssExtractPlugin = require(&#39;mini-css-extract-plugin&#39;);
+plugins: [
+    new MiniCssExtractPlugin({
+        filename: &#39;css/[name].[hash:8].css&#39;,
+        chunkFilename: &#39;css/[id].[hash:8].css&#39;,
+    }),
+],
+module: {
+    rules: [
+        {
+            test: /\.(css)/,
+            use: [
+                {
+                    loader: MiniCssExtractPlugin.loader,
+                },
+                &#39;css-loader&#39;,
+                &#39;postcss-loader&#39;
+            ],
+        }
+    ]
+},</code></pre>
+<ul>
+<li>压缩 (optimize-css-assets-webpack-plugin)</li>
+</ul>
+<pre><code class="js">npm install optimize-css-assets-webpack-plugin -D
+// webpack.config.js
+const OptimizeCSSAssetsPlugin = require(&#39;optimize-css-assets-webpack-plugin&#39;);
+
+optimization: {
+    minimizer: [
+        new OptimizeCSSAssetsPlugin({})
+    ],
+},</code></pre>
+<h3 id="提高打包速度"><a href="#提高打包速度" class="headerlink" title="提高打包速度"></a>提高打包速度</h3><p>用过 webpack (包含<code>vue-cli</code>或者<code>CRA</code>)的小伙伴可能都会发现当项目的依赖越来越多的时候，打包的过程就非常的耗时，这也是 webpack 最令人诟病的一点吧。好在 webpack 提供了一些解决办法:</p>
+<h4 id="DLLPlugin-DllReferencePlugin"><a href="#DLLPlugin-DllReferencePlugin" class="headerlink" title="DLLPlugin + DllReferencePlugin"></a>DLLPlugin + DllReferencePlugin</h4><p>DLLPlugin 和 DllReferencePlugin 是 webpack 的内置插件。具体使用方式参考如下:</p>
+<pre><code class="js">// webpack.dll.js
+const path = require(&#39;path&#39;);
+const webpack = require(&#39;webpack&#39;);
+
+module.exports = {
+    mode: &#39;production&#39;,
+    entry: {
+        // 拆分三方库到dll
+        vendors: [
+            &#39;lodash&#39;
+        ],
+        vue: [
+            &#39;vue&#39;,
+            &#39;vue-router&#39;,
+        ],
+        iview: [
+            &#39;iview&#39;
+        ]
+    },
+    output: {
+        filename: &#39;[name].dll.js&#39;,
+        path: path.resolve(__dirname, &#39;../dll&#39;),
+        library: &#39;[name]&#39;,
+    },
+    plugins: [
+        // 生成dll映射关系manifest
+        new webpack.DllPlugin({
+            name: &#39;[name]&#39;,
+            path: path.resolve(__dirname, &#39;../dll/[name].manifest.json&#39;)
+        })
+    ]
+}
+// webpack.config.js
+const path = require(&#39;path&#39;);
+const webpack = require(&#39;webpack&#39;);
+// 以下2个依赖需要 npm install
+const glob = require(&#39;glob&#39;);
+const AddAssetHtmlWebpackPlugin = require(&#39;add-asset-html-webpack-plugin&#39;);
+
+const assetHtml = [];
+const dllReference = [];
+
+glob.sync(&#39;./dll/**.dll.js&#39;).forEach(item =&gt; {
+    const chunk = item.split(&#39;./dll/&#39;)[1].split(&#39;.dll.js&#39;)[0];
+    assetHtml.push(
+        new AddAssetHtmlWebpackPlugin({
+            filepath: path.resolve(__dirname, `../dll/${chunk}.dll.js`)
+        }),
+    );
+});
+
+glob.sync(&#39;./dll/**.manifest.json&#39;).forEach(item =&gt; {
+    const chunk = item.split(&#39;./dll/&#39;)[1].split(&#39;.manifest.json&#39;)[0];
+    dllReference.push(
+        new AddAssetHtmlWebpackPlugin({
+            filepath: path.resolve(__dirname, `../dll/${chunk}.manifest.json`)
+        }),
+    );
+});
+
+plugins: [
+    ...assetHtml,
+    ...dllReference,
+],</code></pre>
+<h4 id="externals-CDN"><a href="#externals-CDN" class="headerlink" title="externals + CDN"></a>externals + CDN</h4><p>externals 是为了防止将某些import的包(package)打包到 bundle 中，而是在运行时(runtime)再去从外部获取这些扩展依赖。<br>所以，可以将体积大的库分离出来:</p>
+<pre><code class="js">// webpack.config.js
+externals: {
+    &#39;iview&#39;: &#39;iView&#39;,
+    &#39;v-charts&#39;: &#39;VCharts&#39;
+}
+
+// 移除业务代码中 import 语句
+// 在 模板 index.html 中添加 (ps: 以下cdn地址是不存在的，只是为了说明)
+&lt;script src=&quot;https://cdn.com/iview/lib/index.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://cdn.com/echarts/dist/echarts.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://cdn.com/v-charts/lib/index.min.js&quot;&gt;&lt;/script&gt;</code></pre>
+<h4 id="社区提供的-happypack-采用多进程打包，单个进程处理完成只有交回主进程的方式。详见官方文档。"><a href="#社区提供的-happypack-采用多进程打包，单个进程处理完成只有交回主进程的方式。详见官方文档。" class="headerlink" title="社区提供的 happypack 采用多进程打包，单个进程处理完成只有交回主进程的方式。详见官方文档。"></a>社区提供的 happypack 采用多进程打包，单个进程处理完成只有交回主进程的方式。详见<a href="https://github.com/amireh/happypack" target="_blank" rel="noopener">官方文档</a>。</h4><p>除了以上说到的三个方式之外，还有一些需要注意的小点，在配置 webpack 的时候仔细检查即可，无需复杂的配置:</p>
+<ul>
+<li><p>升级Node、webpack 版本(npm、yarn)</p>
+</li>
+<li><p>在尽可能少的模块中使用loader(includes/excludes)</p>
+</li>
+<li><p>尽可能少的使用plugin、确保plugin的可靠性</p>
+</li>
+<li><p>resolve 字段的合理配置</p>
+</li>
+<li><p>注意区分多个环境打包配置的多样性</p>
+</li>
+</ul>
+<h3 id="多页面"><a href="#多页面" class="headerlink" title="多页面"></a>多页面</h3><p>因为之前参加工作的时候有做过微信公众号相关的项目，对于微信这种可能需要依赖其庞大的用户群体进行流量积攒的项目来说，分享、调用微信API之类的功能是必不可少的，如果要是对于分享的页面存在于一个 SPA 页面中，那么对于用户来说不算是很友好的(开发者也不喜欢这样做，会有很多潜在的坑)。所以多页面就又有了价值的提现，对于 webpack 来说，多页面就是多个 entry 打包出多个相对应的 html。</p>
+<p>但是随着业务的不断扩展，页面可能会不断的追加，所以一定要让入口的配置足够灵活，避免每次添加新页面还需要修改构建配置文件，所以需要约定一种格式——文件存放的格式。笔者有进行过一些尝试，<a href="https://github.com/ThoughtZer/vue-multipage-template" target="_blank" rel="noopener">详见</a>，如有问题，请指正。</p>
+<p>主要的 webpack 配置:</p>
+<pre><code class="js">// webpack.config.js
+const path = require(&#39;path&#39;);
+const glob = require(&#39;glob&#39;);
+const HtmlWebpackPlugin = require(&#39;html-webpack-plugin&#39;);
+
+let HTMLPlugins = [];
+let Entries = {};
+
+glob.sync(&#39;./src/pages/**/index.js&#39;).forEach(item =&gt; {
+  const chunk = item.split(&#39;./src/pages/&#39;)[1].split(&#39;/index.js&#39;)[0];
+  Entries[chunk] = item;
+
+  const filename = chunk + &#39;.html&#39;;
+  const htmlConf = {
+    filename: filename,
+    template: path.resolve(__dirname, `../src/template/template.html`),
+    inject: &#39;body&#39;,
+    hash: true,
+    chunks: [chunk, &#39;vendor&#39;],
+  };
+  HTMLPlugins.push(new HTMLWebpackPlugin(htmlConf));
+});
+
+module.exports = {
+    entry: Entries,
+    plugins: [
+        ...,
+        ...HTMLPlugins,
+    ]
+}</code></pre>
+<h3 id="结尾"><a href="#结尾" class="headerlink" title="结尾"></a>结尾</h3><p>到这里基本上 webpack 的常用的一些配置已经足够日常开发使用，配合其社区的强大 Plugin 以及 Loader 系统，应该是能满足各种各样个性化的需求配置，webpack 是很强大的工程化工具，前端开发者还是需要多尝试体验其中的功能的，以上内容是作为以往的学习笔记记录，如有错误，请指正。</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;JavaScript三方库</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "webpack&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

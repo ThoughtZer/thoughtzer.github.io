@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>wavesurfer 处理大音频文件波形渲染(三) ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期三, 一月 1日 2020, 9:12 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>wavesurfer 是一个利用Web Audio API和Canvas进行交互式导航音频可视化三方库。</p>
+<a id="more"></a>
+
+<p>在之前的文章中<a href="/2019/07/27/wavesurfer大音频(一)/">wavesurfer大音频(一)</a>、<a href="/2019/08/02/wavesurfer大音频(二)/">wavesurfer大音频(二)</a>，我们已经能够使用前端的 WebAudio API 对大音频进行分段的解析产生波形文件。但是目前这样的方式仍然不能够满足更大音频的解析，因此继续进行探索，有了这篇总结~</p>
+<h4 id="前端-VS-后端"><a href="#前端-VS-后端" class="headerlink" title="前端 VS 后端"></a>前端 VS 后端</h4><p>有的时候觉得前端很强大，JS什么都能做，像是要”一统天下”的样子，然而这次的大音频事件，真的是改变了这个看法，在浏览器运行的JS真的是受制于浏览器大多了~</p>
+<p>后端运行于服务器，只要有足够大的算力，那么就会有无限的可能~</p>
+<p>所以想到了既然浏览器由于内存的限制，那么就把这个消耗内存的操作放到服务端吧~</p>
+<h4 id="Node"><a href="#Node" class="headerlink" title="Node"></a>Node</h4><p>前端工程师的首选后端语言，与其他各种语言的配合也很方便。</p>
+<h4 id="三方库"><a href="#三方库" class="headerlink" title="三方库"></a>三方库</h4><p><a href="https://github.com/bbc/audiowaveform" target="_blank" rel="noopener">audiowaveform</a>——一个基于 C++ 实现的可以产出音频波形数据的三方库，一条命令就能产生波形文件: </p>
+<p><code>audiowaveform -i 音频文件 -o 要保存的波形文件.json</code></p>
+<p>上面这条命令也就是本篇文章的核心内容了，一切的 Node 代码都是围绕着它进行的。</p>
+<h4 id="主要步骤"><a href="#主要步骤" class="headerlink" title="主要步骤"></a>主要步骤</h4><p>emmmmm….想了想，总结的话还是少写点代码，理一个顺序出来吧。</p>
+<p>1、首先 audiowaveform 是一个 C++ 的库，产出波形使用的是命令行，所以需要服务器上需要安装 audiowaveform。</p>
+<p>2、安装 audiowaveform 之后就可以调用之前的命令来生成 Json 文件。但是也要注意生成 Json 文件之前是要下载音频文件~</p>
+<p>3、生成 Json 文件之后要进行一个保存，与音频进行一个一一对应，以便之后相同音频的波形产生，不再进行一次生成操作，再次节省时间</p>
+<p>4、读取生成的Json返回给前端浏览器</p>
+<h4 id="重要代码"><a href="#重要代码" class="headerlink" title="重要代码"></a>重要代码</h4><ul>
+<li>由于要使用服务器环境中的 audiowaveform ，所以就要使用命令行工具，Node 中的 <code>child_process</code> 子进程。依靠 <code>child_process</code> 的 <code>exec</code> 方法，可以在 Node 代码中执行 command 命令。</li>
+</ul>
+<pre><code class="js">const exec = require(&#39;child_process&#39;).exec;
+
+const AudioDecodePeaks = async (fileInfo, session) =&gt; {
+  return new Promise((resolve, reject) =&gt; {
+    const comand = `audiowaveform -i &#39;${ 文件路径 + 文件名 }.${ 文件扩展名 }&#39; -o ${ 输出路径 + 输出文件名 }.json`;
+    child = exec(comand, (err, stdout, stderr) =&gt; {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(`输出的文件地址`);
+      }
+    });
+  });
+};</code></pre>
+<p>需要注意的是一定要记得获取服务器文件的读写权限，因为 decode 就是一个读和写的操作。</p>
+<ul>
+<li>读取Json</li>
+</ul>
+<pre><code class="js">const fs = require(&#39;fs&#39;);
+
+fs.readFile(`输出的文件地址`, { encoding: &#39;utf8&#39; }, (error, file) =&gt; {
+  if (!error) {
+    const fileContent = JSON.parse(file);
+    // fileContent 即是可以发送给前端的JSON
+  }
+})</code></pre>
+<h4 id="结尾"><a href="#结尾" class="headerlink" title="结尾"></a>结尾</h4><p>好像啰嗦了一堆没用的废话…不过既然是使用型文章，就这样吧~ 中间的如何存储一个音频和波形文件关系呀、错误处理呀、日志呀，就不在多说了。这种方案是在线上奔跑着的最终版了，感兴趣的小伙伴可以尝试一下，针对于600M左右的音频毫无压力，当然压力在于服务端去下载音频那了，所以我们采用的是内网下载，用完即删除。</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;JavaScript三方库</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "wavesurfer 处理大音频文件波形渲染(三)&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

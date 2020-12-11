@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>NextJs的同构使用记录 ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期日, 十月 20日 2019, 8:19 晚上</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>Next.js 是一个轻量级的 React 服务端渲染应用框架。</p>
+<a id="more"></a>
+
+<h3 id="渲染方式"><a href="#渲染方式" class="headerlink" title="渲染方式"></a>渲染方式</h3><p>服务端渲染指的是页面的渲染和生成由服务器来完成，并将渲染好的页面返回客户端进行展示，例如: ASP、JSP、Smarty。</p>
+<p>客户端渲染指的是页面的生成和数据的渲染过程是在客户端（浏览器或APP）执行JavaScript代码完成展示。例如: Angular、React、Vue。</p>
+<p>Web页面的渲染方式从之前的服务端渲染到后续的客户端渲染SPA应用，解耦了前后端开发，使得前端专注于用户UI层，提升用户体验，让后端专注于业务逻辑处理，分离成微服务等。然而SPA对于SEO的支持非常之不友好，对于需要SEO的网站，SPA就不是一个很好的选择。所幸的是 React、Vue 都开始支持服务端渲染(同构)。</p>
+<h4 id="同构"><a href="#同构" class="headerlink" title="同构"></a>同构</h4><p>首屏的渲染交给服务端渲染，提升渲染速度。首屏加载之后，进入页面内部的路由交给客户端控制，不再经过服务端，降低服务器压力。目前基于React的<a href="https://nextjs.frontendx.cn/" target="_blank" rel="noopener">NextJS</a>以及基于Vue的<a href="https://zh.nuxtjs.org/" target="_blank" rel="noopener">NuxtJs</a>都是采用这样的方式。（本文只介绍 NextJS ）</p>
+<h3 id="NextJS"><a href="#NextJS" class="headerlink" title="NextJS"></a>NextJS</h3><p>特性:</p>
+<ul>
+<li><p>默认服务端渲染模式，以文件系统为基础的客户端路由</p>
+</li>
+<li><p>代码自动分隔使页面加载更快</p>
+</li>
+<li><p>以webpack的热替换为基础的开发环境</p>
+</li>
+<li><p>使用React的JSX和ES6的module，模块化和维护更方便</p>
+</li>
+<li><p>可以运行在Koa和其他Node.js的HTTP 服务器上</p>
+</li>
+<li><p>可以定制化专属的babel和webpack配置</p>
+</li>
+<li><p>预置 CSS-in-JS 方案</p>
+</li>
+</ul>
+<h4 id="构建项目"><a href="#构建项目" class="headerlink" title="构建项目"></a>构建项目</h4><p>推荐使用官方(非fb)提供的脚手架工具 <em>create-next-app</em>，直接构建。当然可以手动配置 <em>create-react-app</em>构建出来的项目。<a href="https://nextjs.org/docs#setup" target="_blank" rel="noopener">详见</a></p>
+<p>结构目录:</p>
+<p>  |- components/* // 组件文件夹<br>  |- pages/*      // 页面文件夹<br>  |- static/*     // 静态资源文件夹<br>  |- .gitignore<br>  |- package.json</p>
+<h4 id="开发"><a href="#开发" class="headerlink" title="开发"></a>开发</h4><p>NextJS是根据pages目录下的文件名来确定页面的路由(支持文件夹嵌套)，因此pages目录是只能放置页面代码，不能放置其他代码的。而static目录是项目的静态文件目录，可以放置图片资源，并且Next也帮助我们配置 <code>/static</code> 作为引入资源的根路径。(emmmmm，限制有点多，所以初始化的目录，需要增添点~)</p>
+<p>  |- components/*<br>  |- lib/*          // 资源库文件夹(自写或者不能npm install的包)<br>  |- pages/*<br>  |- server/*       // 自定义服务端代码<br>  |- static/*<br>  |- store/*        // redux<br>  |- style/*        // 如果不需要官方提供的css-in-js方案，可自定义其他方案(css-module或者styled-components)，放置样式<br>  |- .gitignore<br>  |- package.json<br>  |- next.config.js // next主配置文件</p>
+<p>配置好目录之后，就是和一般的react项目一样进行开发就完事了，推荐使用 <a href="https://reactjs.org/docs/hooks-intro.html" target="_blank" rel="noopener">hooks</a></p>
+<h4 id="一些坑"><a href="#一些坑" class="headerlink" title="一些坑"></a>一些坑</h4><ul>
+<li>css-in-js 不支持除官方已经使用的<code>style-jsx</code>之外的多种css-in-js方案合集</li>
+</ul>
+<p>比如不支持同时使用<code>css-module</code>和<code>styled-components</code>，否则可能会在页面中使用Link前端跳转页面失败。当然如果不需要保存页面状态，可以直接使用 a 标签跳转，没有此问题。<a href="https://github.com/zeit/next-plugins/issues/282#issuecomment-523696006" target="_blank" rel="noopener">详情可见</a></p>
+<ul>
+<li>异步组件无法使用 ref 获取组件实例</li>
+</ul>
+<p>因为NextJS是每个页面都可能在服务端渲染的，所以对于一些使用了浏览器对象(如: window、document等)的JavaScript库，不能直接引入。幸好的是NextJS提供了<a href="https://nextjs.org/docs#dynamic-import" target="_blank" rel="noopener"><code>dynamic</code></a>引入，选择<code>No SSR</code>引入使用此类库的子组件，可以解决此类的问题。当然万事有利有弊，使用此类方式引入的子组件就不能被父组件通过 ref 获取到子组件的实例，从而不能在父组件调用子组件的任何方法，因为异步组件是一个<code>LoadableComponent</code><a href="https://github.com/facebook/react/blob/f6b8d31a76cbbcbbeb2f1d59074dfe72e0c82806/packages/react/src/ReactElement.js#L371-L384" target="_blank" rel="noopener">详见 react 源码</a></p>
+<ul>
+<li>自定义node服务，如果使用<code>Koa-router</code>不支持使用，<code>router.get/post</code> 此类方式编写接口，需使用中间件，传递<code>ctx</code>，进而判断<code>path</code></li>
+</ul>
+<pre><code class="js">// api.js
+const api = (server) =&gt; {
+  server.use(async (ctx, next) =&gt; {
+    const { path, method } = ctx;
+    if (path.startWith(&#39;xxxx&#39;)) { // 满足接口的path条件
+      // do something
+    } else {
+      await next();
+    }
+  })
+}
+// server.js
+const server = new Koa();
+api(server)</code></pre>
+<p>当然如果不想在同一个项目里面写接口和渲染的话，可以另起Api接口项目，使用node服务转发。主要通过<code>http-proxy-middleware</code>和<code>koa-connect</code>。需要注意的是<code>http-proxy-middleware</code>转发接口，如果是上传资源之类的接口，当接口持续时间过长没有返回接口，代理会被断开，导致接收不到响应。但是线上推荐使用<a href="http://nginx.org/en/" target="_blank" rel="noopener"><code>nginx</code></a>。</p>
+<pre><code class="js">const Koa = require(&#39;koa&#39;);
+const next = require(&#39;next&#39;);
+const c2k = require(&#39;koa-connect&#39;);
+const proxyMiddleware = require(&#39;http-proxy-middleware&#39;);
+
+const dev = process.env.NODE_ENV !== &#39;production&#39;;
+const app = next({ dev });
+const handle = app.getRequestHandler();
+
+const devProxy = {
+  target: &#39;转发接口地址&#39;,
+  changeOrigin: true,
+  secure: false,
+  onError(err, req, res) {
+    res.writeHead(500, {
+      &#39;Content-Type&#39;: &#39;text/plain&#39;,
+    });
+    res.end(
+      &#39;Something went wrong. And we are reporting a custom error message.&#39;,
+    );
+  },
+};
+app.prepare().then(() =&gt; {
+  const server = new Koa();
+  // 开发环境代理接口，线上推荐使用nginx
+  if (dev &amp;&amp; devProxy) {
+    server.use(async (ctx, nextKoa) =&gt; {
+      if (ctx.url.startsWith(&#39;/api&#39;)) { // 以api开头的请求全部转发
+        // ctx.respond = false;
+        await c2k(proxyMiddleware(devProxy))(ctx, next);
+      } else {
+        await nextKoa();
+      }
+    });
+  }
+  // 中间件
+  server.use(async (ctx) =&gt; {
+    // 传入的是nodeJS原生的req、res达到兼容更多的node框架
+    const { req, res } = ctx;
+    await handle(req, res);
+    ctx.respond = false;
+  });
+  server.listen(8888, () =&gt; {
+    console.log(&#39;koa server listen on port 8888&#39;); // eslint-disable-line
+  });
+});</code></pre>
+<pre><code class="js">const mapStateToProps = (state) =&gt; {
+  return {
+    reduxProp: state[&#39;模块名&#39;][&#39;需要获取redux的该模块下的某一字段的key&#39;],
+  };
+};</code></pre>
+<ul>
+<li>static 文件夹存放的图片资源压缩问题</li>
+</ul>
+<p>在开发SPA应用的时候，经常会使用 webpack 进行打包编译，NextJS也是。但是不同的是: NextJS规定了静态文件路由 static，打包编译过程中不会处理这些文件，且打包之后启动服务同样使用的 static 文件。所以在图片压缩这个上面， NextJS 可能无法做到像一般的SPA一样通过 loader 处理。笔者使用的方式是通过编写一个 node 压缩图片脚本，把图片输出到 static 目录使用。主要使用<code>imagemin</code>、<code>imagemin-jpegtran</code>、<code>imagemin-pngquant</code>三个来自于<a href="https://github.com/tcoopman/image-webpack-loader#readme" target="_blank" rel="noopener"><code>image-webpack-loader</code></a>的依赖。</p>
+<ul>
+<li>getInitialProps 生命周期钩子</li>
+</ul>
+<p>NextJS提供了一个很强大的生命周期钩子: <code>getInitialProps</code>，会在服务端渲染和客户端渲染的时候都执行，但是只要服务端执行了客户端就不会执行。所以一般用来当做请求数据的钩子使用。</p>
+<p>有些时候我们可能需要对一些数据随机的进行展示，两种可能采用的方式:</p>
+<ol>
+<li>在<code>getInitialProps</code>中返回数据到组件的 props 中，然后再随机取值，渲染</li>
+<li>在<code>getInitialProps</code>中返回随机去的数据到组件的 props 中，然后再渲染</li>
+</ol>
+<p>需要注意的是一旦采用了函数式组件的编写模式，方式1是不可取的，因为一旦当前页面被当做首屏，进行服务端渲染，服务端是会执行<code>getInitialProps</code>以及组件函数，浏览器渲染的时候不会执行<code>getInitialProps</code>，但是同样会执行组件函数，导致前后端数据存在不一致的可能就会发生。因此推荐第二种方式，数据的处理统一放置于<code>getInitialProps</code>。</p>
+<ul>
+<li>getInitialProps 钩子发起请求</li>
+</ul>
+<p>使用 SSR 的时候，一般希望进入页面就有数据，那么请求数据一定就要在进入页面之前。所以 <code>getInitialProps</code> 钩子就必不可少，但是需要注意的是 <code>getInitialProps</code> 的两端执行特性，在服务端执行的时候，如果直接使用接口路由地址，则会出现找不到地址的情况，必须使用完整的接口地址: <strong>域名 / ip + 端口 + 路由</strong> 的方式，然而客户端请求的时候是不需要这样的，并且一旦客户端使用这样完整接口地址方式，如果后端没有针对跨域进行配置，则会出现跨域请求。因此需要针对此种情况进行兼容处理。</p>
+<pre><code class="js">// pages 文件夹下 页面 Jsx
+Component.getInitialProps = () =&gt; {
+  let requestURL = &#39;/api/xxx&#39;;
+  if (typeof window === &#39;undefined&#39;) { // 判断是否是服务端渲染
+    requestURL = `http://127.0.0.1:3000${requestURL}`
+  }
+  // 发起请求。当然推荐使用 axios 使用baseURL处理
+  // ...
+}</code></pre>
+<p>文章所用NextJS版本为9.1.1~</p>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;框架</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "NextJs的同构使用记录&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>

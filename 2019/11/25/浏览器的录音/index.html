@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+
+
+
+
+
+
+
+
+
+
+
+
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" sizes="76x76" href="/">
+    <link rel="icon" type="image/png" href="/favicon.ico">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="description" content="记录一些目前做的">
+    <meta name="author" content="ThoughtZer">
+    <meta name="keywords" content="记录">
+    <title>浏览器的录音 ~ 木メメ木+大</title>
+    <link rel="stylesheet" href="/lib/font-awesome/css/all.min.css?v=5.7.2">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/bootstrap.min.css?v=4.3.1">
+    <link rel="stylesheet" href="/lib/mdbootstrap/css/mdb.min.css?v=4.8.7">
+    <link rel="stylesheet" href="/lib/github-markdown/github-markdown.min.css">
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1067060_l7tuu6qerl9.css">
+    
+        <link rel="stylesheet" href="/lib/prettify/tomorrow-night-eighties.min.css">
+    
+    <link rel="stylesheet" href="/css/main.css">
+
+    
+</head>
+
+
+<body>
+  <header style="height: 70vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/"><strong>木メメ木+大</strong></a>
+
+        <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <div class="animated-icon"><span></span><span></span><span></span></div>
+        </button>
+
+        <!-- Collapsible content -->
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto text-center">
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/">首页</a>
+                </li>
+                
+                <li class="nav-item">
+                    <a class="nav-link" href="/about/">关于我</a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</nav>
+    <div class="view intro-2" style="background: url('/bg.jpeg')no-repeat center center;background-size: cover;">
+    <div class="full-bg-img">
+        <div class="mask rgba-black-light flex-center">
+        <div class="container text-center white-text wow fadeInUp">
+            <span class="h2" id="subtitle">
+              
+            </span>
+            <br>
+            
+            <p>星期一, 十一月 25日 2019, 5:21 下午</p>
+            
+        </div>
+        </div>
+    </div>
+    </div>
+  </header>
+
+  <main>
+  
+  <div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 ">
+            <div class="post-content markdown-body py-5 z-depth-3 main">
+                <p>web 的能力随着移动端的发展被扩展的越来越好，这篇记录想记录下使用 Web Audio API 进行录音分析的过程。所使用的浏览器为 Chrome 最新版本。</p>
+<a id="more"></a>
+
+<h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>Web Audio API 使用户可以在音频上下文(AudioContext)中进行音频操作，具有模块化路由的特点。简单来说使用 Web Audio API 就是创建一个 AudioContext 在此基础环境上进行一系列的后续操作。</p>
+<h4 id="AudioContext"><a href="#AudioContext" class="headerlink" title="AudioContext"></a>AudioContext</h4><p>声明一个 AudioContext:</p>
+<pre><code class="js">this.audioContext = new AudioContext;</code></pre>
+<h4 id="创建录音-获取录音对象"><a href="#创建录音-获取录音对象" class="headerlink" title="创建录音/获取录音对象"></a>创建录音/获取录音对象</h4><p>使用浏览器的录音能力，需要获取用户的权限，才能调用。</p>
+<pre><code class="js">window.navigator.mediaDevices.getUserMedia({
+  audio: true,
+}).then(stream =&gt; {
+  // audioInput 表示 音频源节点
+  // stream是通过navigator.getUserMedia获取的外部（如麦克风）stream音频输出，对于这就是输入
+  this.audioInput = this.audioContext.createMediaStreamSource(stream);
+  // createMediaStreamSource()方法用于创建一个新的 MediaStreamAudioSourceNode 对象， 需要传入一个媒体流对象(MediaStream对象)， 然后来自MediaStream的音频就可以被播放和操作。
+  this.stream = stream;
+}).catch((err) =&gt; {
+  console.log(&#39;发生错误&#39;);
+}).then(function() {
+  this.audioInput.connect(this.recorder); // 音频源节点连接音频处理节点
+  this.recorder.connect(this.audioContext.destination); // 音频处理节点连接音频渲染设备
+});</code></pre>
+<p>通过 <code>mediaDevices.getUserMedia</code> 会在此时弹出授权窗口，用户授权之后就可以开始调用 <code>recorder</code> 上的能力。</p>
+<h4 id="createScriptProcessor-方法"><a href="#createScriptProcessor-方法" class="headerlink" title="createScriptProcessor 方法"></a>createScriptProcessor 方法</h4><p>创建一个ScriptProcessorNode用于通过JavaScript音频处理节点，具体参数<a href="https://developer.mozilla.org/zh-CN/docs/Web/API/AudioContext/createScriptProcessor" target="_blank" rel="noopener">见</a></p>
+<pre><code class="js">this.recorder = this.audioContext.createScriptProcessor(4096, 1, 1);
+
+// onaudioprocess 方法是 在一次达到设定的创建scriptNode时缓冲区大小时就出发一次
+this.recorder.onaudioprocess = (e) =&gt; {
+  // getChannelData返回 Float32Array 类型的 pcm 数据
+  const data = e.inputBuffer.getChannelData(0);
+  pcmData.push(data);
+  audioSize += data.length;
+}</code></pre>
+<p>这样我们就能实时的获取到用户的录音的PCM内容，经过处理之后就可以播放使用。</p>
+<h5 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h5><p>在某些项目中，需求可能需要对用户的录音内容进行语音识别，在目前的市场上的大多数语音识别接口只支持 16K 的采样率的 wav 音频。然而目前的 chrome 浏览器的采样率是只读状态且不能修改(修改无效)，所以需要在每一次<code>onaudioprocess</code> 触发的时候对 PCM 数据进行相应的转化处理，来达到使用要求。</p>
+<p>推荐一个转化采样率的方法: <code>Recorder</code> 中<a href="https://github.com/xiangyuecn/Recorder/blob/9e1006009dc66d51a0fcf66dfaf96b59dfc1436e/src/recorder-core.js#L129-L222" target="_blank" rel="noopener">源码</a></p>
+<h4 id="已有音频的实时分析"><a href="#已有音频的实时分析" class="headerlink" title="已有音频的实时分析"></a>已有音频的实时分析</h4><p>实时获取录音的内容经过上面的操作已经可以实现，在笔者的需求中还需要给用户一个音频处理实例，针对一个已有的音频进行实时分析。所以就需要实时获取到音频然后播放，且获取到正在播放的PCM数据。</p>
+<pre><code class="js">// 一定要把 context source 的定义写在异步方法之前，否则在 safari 浏览器无法触发 source 的一些事件
+const context = new (window.AudioContext || window.webkitAudioContext)();
+const source = context.createBufferSource();
+
+axios.get(&#39;音频URL&#39;, { responseType: &#39;arraybuffer&#39; }).then((res) =&gt; {
+  const blob = new Blob([res.data], { type: &#39;audio/wav&#39; }); // 实时分析wav文件,但是这个文件经过 decodeAudioData 之后是没有 wav 头信息的，如果需要请自行加上
+  const read = new FileReader();
+  read.onloadend = () =&gt; {
+    context.decodeAudioData(read.result, (buffer) =&gt; {
+      const processor = context.createScriptProcessor(4096, 1, 1);
+      processor.connect(context.destination);
+      source.connect(processor);
+      source.connect(context.destination); // 资源连接设备 如果不连接则不会发出声音
+      // 实时回调
+      processor.onaudioprocess = (e) =&gt; {
+        // getChannelData返回 Float32Array 类型的 pcm 数据
+        const data = e.inputBuffer.getChannelData(0);
+        pcmData.push(data);
+        audioSize += data.length;
+        // 实时处理...
+      }
+
+      source.buffer = buffer;
+      // 播完断开
+      source.onended = () =&gt; {
+        processor.disconnect(context.destination);
+        source.disconnect(processor);
+        source.disconnect(context.destination);
+      };
+    }
+  };
+
+  read.readAsArrayBuffer(blob);
+})</code></pre>
+<p>以上是项目中使用 Web Audio API 的记录，当然需求不仅如此，还有可视化音频的处理等，不过既然已经能拿到实时的 PCM 数据，只需要对这些数据进行实时处理加工，绘制即可。</p>
+<p>其中的技术参考了一个开源的录音库: <a href="https://github.com/xiangyuecn/Recorder" target="_blank" rel="noopener">Recorder</a></p>
+<h4 id="附录"><a href="#附录" class="headerlink" title="附录"></a>附录</h4><p>创建空的wav头信息</p>
+<pre><code class="js">const createWavHeader = () =&gt; {
+  const WAV_HEAD_SIZE = 44;
+  const buffer = new ArrayBuffer(WAV_HEAD_SIZE);
+  // 需要用一个view来操控buffer
+  const data = new DataView(buffer);
+  let offset = 0;
+  const writeString = (str) =&gt; {
+    for (let i = 0; i &lt; str.length; i += 1, offset += 1) {
+      data.setUint8(offset, str.charCodeAt(i));
+    };
+  };
+  const write16 = (v) =&gt; {
+    data.setUint16(offset, v, true);
+    offset += 2;
+  };
+  const write32 = (v) =&gt; {
+    data.setUint32(offset, v, true);
+    offset += 4;
+  };
+  /* RIFF identifier */
+  writeString(&#39;RIFF&#39;);
+  /* RIFF chunk length */
+  write32(36 + 0); // 0 这个参数是代表wav数据长度 可通过 pcmData 获得，此处写0是因为录音开始无法获取到wav总大小
+  /* RIFF type */
+  writeString(&#39;WAVE&#39;);
+  /* format chunk identifier */
+  writeString(&#39;fmt &#39;);
+  /* format chunk length */
+  write32(16);
+  /* sample format (raw) */
+  write16(1);
+  /* channel count */
+  write16(1);
+  /* sample rate */
+  write32(16000);
+  /* byte rate (sample rate * block align) */
+  write32(16000 * (16 / 8));
+  /* block align (channel count * bytes per sample) */
+  write16(16 / 8);
+  /* bits per sample */
+  write16(16);
+  /* data chunk identifier */
+  writeString(&#39;data&#39;);
+  /* data chunk length */
+  write32(0);
+  return data;
+};
+
+export default createWavHeader;
+</code></pre>
+
+                <hr>
+                <div>
+                    <p>
+                        
+                        <span class="badge badge-light">#&nbsp;JavaScript</span>
+                        &nbsp;
+                        
+                    </p>
+                </div>
+                <br>
+                
+            </div>
+        </div>
+        <div class="d-none d-md-block col-md-2">
+            
+  <div id="toc" class="py-5">
+    <p class="h6"><i class="iconfont icon-toc" style="vertical-align:middle"></i> Toc:</p> 
+    <div id="tocbot"></div>
+  </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- custom -->
+
+
+<!-- Comments -->
+<div class="comments" id="comments">
+    
+</div>
+  
+  </main>
+
+<footer class="mt-5">
+    <div class="text-center py-3">
+      <a href="#" rel="nofollow noopener"><b>ThoughtZer</b></a>
+      <i class="iconfont icon-love"></i>
+      <a href="https://github.com/ThoughtZer" target="_blank" rel="nofollow noopener"> <b>Gayhub</b></a>
+      <br>
+      
+    </div>
+  </footer>
+  
+    <!-- SCRIPTS -->
+    <script src="/lib/mdbootstrap/js/jquery-3.4.1.min.js"></script>
+    <script src="/lib/mdbootstrap/js/popper.min.js"></script>
+    <script src="/lib/mdbootstrap/js/bootstrap.min.js?v=4.3.1"></script>
+    <script src="/lib/mdbootstrap/js/mdb.min.js?v=4.8.7"></script>
+    <script src="/js/main.js"></script>
+    
+      
+        <script src="/lib/tocbot/tocbot.min.js?v=4.7.0"></script>
+      
+      <script src="/js/post.js"></script>
+    
+    
+      <script src="/lib/prettify/prettify.min.js?v=0.1.0"></script>
+      <script>
+        $(document).ready(function(){
+          $('pre').addClass('prettyprint linenums');
+          prettyPrint();
+        })
+      </script>
+    
+    
+      <script src="/lib/typed/typed.min.js?v=2.0.9"></script>
+      <script>
+          var typed = new Typed('#subtitle', {
+            strings: [
+              '  ',
+              "浏览器的录音&nbsp;",
+          ],
+          cursorChar: "",
+          typeSpeed: 70,
+          startDelay: 300, //开始之前延迟300毫秒
+          loop: false,
+          });
+          $(".typed-cursor").addClass("h2");
+      </script>
+    
+    
+      <script src="/lib/anchor/anchor.min.js?v=4.2.0"></script>
+      <script>
+        anchors.options = {
+          placement: "right",
+          visible: "false",
+          
+        };
+        anchors.add(".post-content > h1,h2,h3,h4,h5,h6");
+      </script>
+    
+</body>
+</html>
